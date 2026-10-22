@@ -17,6 +17,7 @@
   --azul: #2f6aa3;
   --azul-suave: #e2edf8;
   --gris-suave: #ecebe6;
+  --rosa-suave: #f7e4ec;
   --ceo: linear-gradient(#d6ebf7, #eef6fb);
   --herba-alta: #5c9e3f;
   --herba-media: #a7b13a;
@@ -47,6 +48,7 @@
     --azul: #7fb1e3;
     --azul-suave: #1d2c3b;
     --gris-suave: #2b2d27;
+    --rosa-suave: #3a2530;
     --ceo: linear-gradient(#22313b, #1c262d);
     --herba-alta: #4c8a34;
     --herba-media: #8d9530;
@@ -218,6 +220,8 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
 /* ---------- Fotos ---------- */
 .foto { position: relative; display: block; overflow: hidden; background: var(--superficie-2); }
 .foto .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.6rem; }
+.ph.s-F { background: var(--rosa-suave); }
+.ph.s-M { background: var(--azul-suave); }
 .foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .foto img:not([src]) { display: none; }
 .falecido .foto img, .foto.falecido img, .mini-animal.falecido img { filter: grayscale(1) brightness(.55); }
@@ -379,6 +383,25 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
 .confirmar-caixa p { margin: 0 0 6px; white-space: pre-line; }
 .confirmar-caixa .botons { justify-content: flex-end; }
 .btn.perigo { background: var(--vermello); border-color: var(--vermello); color: #fff; }
+
+/* ---------- Grupos ---------- */
+.filtro.xestionar { border-style: dashed; }
+.lista-grupos { display: flex; flex-direction: column; gap: 8px; }
+.fila-grupo {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; width: 100%; cursor: pointer;
+  padding: 10px 14px; border-radius: 12px; border: 1px solid var(--borde); background: var(--superficie);
+}
+.fila-grupo:hover { border-color: var(--primario); }
+.cab-grupo { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; }
+.cab-grupo .espazo { flex: 1; }
+.bloque-grupo + .bloque-grupo { margin-top: 16px; }
+.bloque-grupo h4 { margin: 0 0 6px; }
+.check-grupo {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: var(--superficie-2); cursor: pointer;
+}
+.check-grupo input { width: 20px; height: 20px; accent-color: var(--primario); flex: none; }
+.bloque-grupo:has(.check-grupo) .lista-check { padding-left: 14px; border-left: 2px solid var(--borde); margin-left: 9px; }
 
 /* ---------- Lector DIB ---------- */
 .escaner { position: relative; aspect-ratio: 4 / 3; background: #000; border-radius: var(--raio); overflow: hidden; }

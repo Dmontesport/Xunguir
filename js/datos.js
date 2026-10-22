@@ -5,7 +5,7 @@
 // os cambios feitos en varios dispositivos: gaña o rexistro máis recente.
 X.datos = (() => {
   const CLAVE = 'xunguir.estado', CLAVE_SUCIO = 'xunguir.sucio';
-  const COLECCIONS = ['especies', 'animais', 'parcelas', 'lotes'];
+  const COLECCIONS = ['especies', 'animais', 'grupos', 'parcelas', 'lotes'];
 
   // Parámetros por especie. Comida en kg de materia seca/día.
   // mantemento: % do peso vivo que precisa comer para manter o peso

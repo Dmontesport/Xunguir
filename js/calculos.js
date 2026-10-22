@@ -6,6 +6,12 @@ X.calc = (() => {
   const XENERICA = { id: '', nome: '?', icono: '🐾', ciclo: 21, duracionCelo: 1, xestacion: 150, celoPostParto: 45, pubertade: 365, destete: 90, pesoNac: 10, pesoAdultoF: 100, pesoAdultoM: 120, mantemento: 2, conversion: 6, k: 0.006 };
 
   const especie = a => X.datos.obter('especies', a.especieId) || XENERICA;
+  // Icona do macho para as especies que aínda non a teñen gardada
+  const ICONOS_M = { vacun: '🐂', ovino: '🐏', caprino: '🐐', porcino: '🐗', equino: '🐴' };
+  const icono = a => {
+    const e = especie(a);
+    return a.sexo === 'M' ? (e.iconoM || ICONOS_M[e.id] || e.icono) : e.icono;
+  };
   const estado = a => a.falecemento ? 'falecido' : (a.venda && a.venda.data) ? 'vendido' : 'activo';
   const activo = a => estado(a) === 'activo';
   const dataFin = a => a.falecemento || (a.venda && a.venda.data) || u.hoxe();
@@ -167,7 +173,7 @@ X.calc = (() => {
   }
 
   return {
-    especie, estado, activo, peso, necesidades, comidaProposta, repro,
+    especie, icono, estado, activo, peso, necesidades, comidaProposta, repro,
     animaisParcela, consumo, balance, capacidade, stock, prevision, checkpoint,
     gastadas, restantes, avisos,
   };

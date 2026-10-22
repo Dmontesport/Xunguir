@@ -139,9 +139,8 @@ X.ui = (() => {
 
   // Foto dun animal (ou o emoji da especie se non ten)
   function foto(a) {
-    const e = X.calc.especie(a);
     const src = a.foto ? X.fotos.src(a.foto) : '';
-    return `<span class="ph" aria-hidden="true">${e.icono}</span>${a.foto ? `<img data-foto="${u.esc(a.foto)}" ${src ? `src="${src}"` : ''} alt="">` : ''}`;
+    return `<span class="ph s-${a.sexo === 'M' ? 'M' : 'F'}" aria-hidden="true">${X.calc.icono(a)}</span>${a.foto ? `<img data-foto="${u.esc(a.foto)}" ${src ? `src="${src}"` : ''} alt="">` : ''}`;
   }
 
   const chip = (txt, cls = '') => `<span class="chip ${cls}">${txt}</span>`;

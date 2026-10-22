@@ -57,7 +57,7 @@ X.vConfig = (() => {
         <div class="taboa-scroll"><table class="taboa">
           <thead><tr><th></th><th>${t('nome')}</th><th>${t('ciclo')}</th><th>${t('xestacion')}</th><th>${t('pesoAdulto')} ♀/♂</th><th>${t('animais')}</th><th></th></tr></thead>
           <tbody>${especies.map(e => `<tr>
-            <td class="ico">${e.icono}</td><td>${u.esc(e.nome)}</td><td>${e.ciclo} d</td><td>${e.xestacion} d</td>
+            <td class="ico">${e.icono} ${X.calc.icono({ especieId: e.id, sexo: 'M' })}</td><td>${u.esc(e.nome)}</td><td>${e.ciclo} d</td><td>${e.xestacion} d</td>
             <td>${u.numero(e.pesoAdultoF, 0)} / ${u.numero(e.pesoAdultoM, 0)} kg</td><td>${usos(e.id)}</td>
             <td><button class="btn-icono peq" data-accion="editar-especie" data-id="${e.id}" aria-label="${t('editar')}">${ui.ic('edit')}</button></td></tr>`).join('')}</tbody>
         </table></div>
@@ -219,7 +219,8 @@ X.vConfig = (() => {
       ${ui.cab(novo ? t('novaEspecie') : u.esc(e.nome))}
       <div class="modal-corpo"><div class="grella-campos">
         ${ui.campo(t('nome') + ' *', ui.entrada('nome', e.nome, 'required'))}
-        ${ui.campo(t('icono'), ui.entrada('icono', e.icono, 'maxlength="4"'), t('axIcono'))}
+        ${ui.campo(t('iconoFemia'), ui.entrada('icono', e.icono, 'maxlength="4"'), t('axIcono'))}
+        ${ui.campo(t('iconoMacho'), ui.entrada('iconoM', e.id ? X.calc.icono({ especieId: e.id, sexo: 'M' }) : e.iconoM, 'maxlength="4"'), t('axIcono'))}
         ${CAMPOS_ESPECIE.map(([k, etq, un, ax]) => ui.campo(`${t(etq)}${un ? ` (${un})` : ''}`, ui.numero(k, e[k], 'required'), ax ? t(ax) : '')).join('')}
       </div></div>
       ${ui.pe(`${!novo ? `<button type="button" class="btn perigo-texto" data-accion="borrar-especie" data-id="${e.id}" ${usos ? `disabled title="${t('especieEnUso')}"` : ''}>${ui.ic('trash')}<span>${t('eliminar')}</span></button>` : ''}
@@ -231,7 +232,8 @@ X.vConfig = (() => {
   X.accions['editar-especie'] = el => formEspecie(D.obter('especies', el.dataset.id));
   X.formularios.especie = form => {
     const f = new FormData(form), id = form.dataset.id || u.uid(), prev = D.obter('especies', id) || {};
-    const e = { ...prev, id, nome: (f.get('nome') || '').trim(), icono: (f.get('icono') || '').trim() || '🐾' };
+    const icono = (f.get('icono') || '').trim() || '🐾';
+    const e = { ...prev, id, nome: (f.get('nome') || '').trim(), icono, iconoM: (f.get('iconoM') || '').trim() || icono };
     CAMPOS_ESPECIE.forEach(([k]) => { e[k] = u.num(f.get(k)) ?? prev[k]; });
     D.gardar('especies', e);
     ui.modal.pechar();

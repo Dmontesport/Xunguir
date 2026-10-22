@@ -168,10 +168,15 @@ X.vParcelas = (() => {
         </dl>
         <div class="botons"><button class="btn" data-accion="axustar-stock" data-id="${p.id}">${t('axustarStock')}</button></div>
         <section class="seccion"><h3>${t('animaisAsignados')} (${an.length})</h3>
-          ${an.length ? `<ul class="lista-animais">${an.map(a => `<li>
+          ${an.length ? X.vGrupos.repartir(an).map(b => `
+            ${b.grupo ? `<div class="cab-grupo"><button class="enlace" data-accion="ver-grupo" data-id="${b.grupo.id}">👥 ${u.esc(b.grupo.nome)}</button>
+              <small>${X.tp('nAnimais', b.animais.length)}</small><span class="espazo"></span>
+              <button class="btn peq" data-accion="quitar-grupo-parcela" data-id="${p.id}" data-grupo="${b.grupo.id}">${ui.ic('x')}<span>${t('quitarGrupo')}</span></button></div>`
+            : X.vGrupos.repartir(an).length > 1 ? `<div class="cab-grupo"><small>${t('senGrupo')}</small></div>` : ''}
+            <ul class="lista-animais">${b.animais.map(a => `<li>
             <button class="mini-animal" data-accion="ver-animal" data-id="${a.id}"><span class="foto">${ui.foto(a)}</span>
               <span>${u.esc(a.nome)}<small>${a.comidaDia ? u.kg(a.comidaDia) + '/' + t('dia') : t('senComidaDefinida')}</small></span></button>
-            <button class="btn-icono peq" data-accion="quitar-animal" data-id="${a.id}" aria-label="${t('quitar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`
+            <button class="btn-icono peq" data-accion="quitar-animal" data-id="${a.id}" aria-label="${t('quitar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`).join('')
           : `<p class="nota">${t('senAnimaisParcela')}</p>`}
           <div class="botons"><button class="btn primario" data-accion="asignar" data-id="${p.id}">${ui.ic('plus')}<span>${t('asignarAnimais')}</span></button></div>
         </section>`;
@@ -304,15 +309,41 @@ X.vParcelas = (() => {
   X.accions['asignar'] = el => {
     const p = D.obter('parcelas', el.dataset.id);
     const an = D.lista('animais').filter(c.activo).sort(u.porNome);
+    const filaAnimal = a => {
+      const outra = a.parcelaId && a.parcelaId !== p.id && D.obter('parcelas', a.parcelaId);
+      return `<label class="check-animal"><input type="checkbox" name="a" value="${a.id}" ${a.parcelaId === p.id ? 'checked' : ''} data-cambio="check-animal">
+        <span class="foto">${ui.foto(a)}</span>
+        <span class="txt"><b>${u.esc(a.nome)}</b><small>${a.crotal ? u.esc(a.crotal) + ' · ' : ''}${a.comidaDia ? u.kg(a.comidaDia) + '/' + t('dia') : t('senComidaDefinida')}${outra ? ` · 📍 ${u.esc(outra.nome)}` : ''}</small></span></label>`;
+    };
+    // Cada grupo leva unha caixa que marca/desmarca todos os seus animais
+    const bloques = X.vGrupos.repartir(an).map(b => `<div class="bloque-grupo">
+      ${b.grupo ? `<label class="check-grupo"><input type="checkbox" data-cambio="check-grupo">
+        <span>👥 <b>${u.esc(b.grupo.nome)}</b> <small>${X.tp('nAnimais', b.animais.length)} · ${t('grupoEnteiro')}</small></span></label>`
+        : `<h4>${t('senGrupo')}</h4>`}
+      <div class="lista-check">${b.animais.map(filaAnimal).join('')}</div></div>`).join('');
     ui.modal.abrir(`<form data-form="asignar" data-id="${p.id}" class="modal-form">
       ${ui.cab(t('asignarA', { nome: u.esc(p.nome) }), true)}
-      <div class="modal-corpo">${an.length ? `<div class="lista-check">${an.map(a => {
-        const outra = a.parcelaId && a.parcelaId !== p.id && D.obter('parcelas', a.parcelaId);
-        return `<label class="check-animal"><input type="checkbox" name="a" value="${a.id}" ${a.parcelaId === p.id ? 'checked' : ''}>
-          <span class="foto">${ui.foto(a)}</span>
-          <span class="txt"><b>${u.esc(a.nome)}</b><small>${a.crotal ? u.esc(a.crotal) + ' · ' : ''}${a.comidaDia ? u.kg(a.comidaDia) + '/' + t('dia') : t('senComidaDefinida')}${outra ? ` · 📍 ${u.esc(outra.nome)}` : ''}</small></span></label>`;
-      }).join('')}</div>` : `<p class="nota">${t('senAnimaisActivos')}</p>`}</div>
+      <div class="modal-corpo">${an.length ? bloques : `<p class="nota">${t('senAnimaisActivos')}</p>`}</div>
       ${ui.pe(ui.btnCancelar() + ui.btnGardar())}</form>`, { volver: () => verFicha(p.id) });
+    document.querySelectorAll('#modal .bloque-grupo').forEach(sincronizarGrupo);
+  };
+
+  // Estado da caixa do grupo: marcada (todos), a medias (algúns) ou baleira
+  function sincronizarGrupo(bloque) {
+    const g = bloque.querySelector('[data-cambio="check-grupo"]');
+    if (!g) return;
+    const caixas = [...bloque.querySelectorAll('input[name=a]')], n = caixas.filter(i => i.checked).length;
+    g.checked = n === caixas.length;
+    g.indeterminate = n > 0 && n < caixas.length;
+  }
+  X.cambios['check-grupo'] = el => {
+    el.closest('.bloque-grupo').querySelectorAll('input[name=a]').forEach(i => { i.checked = el.checked; });
+  };
+  X.cambios['check-animal'] = el => sincronizarGrupo(el.closest('.bloque-grupo'));
+
+  X.accions['quitar-grupo-parcela'] = el => {
+    const p = D.obter('parcelas', el.dataset.id);
+    D.lote(() => c.animaisParcela(p).filter(a => a.grupoId === el.dataset.grupo).forEach(a => D.gardarAnimal({ ...a, parcelaId: null })));
   };
   X.formularios.asignar = form => {
     const p = D.obter('parcelas', form.dataset.id);

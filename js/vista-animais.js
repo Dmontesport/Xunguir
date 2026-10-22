@@ -4,7 +4,7 @@
 X.vAnimais = (() => {
   const u = X.u, ui = X.ui, c = X.calc, D = X.datos;
   const t = (...a) => X.t(...a);
-  const filtro = { q: '', especie: '', sexo: '' };
+  const filtro = { q: '', especie: '', sexo: '', grupo: '' }; // grupo: '' todos, '_sen' sen grupo, ou id
   const abertos = { vendido: true, falecido: true };
 
   // ---------- Lista ----------
@@ -12,6 +12,7 @@ X.vAnimais = (() => {
     const q = filtro.q.trim().toLowerCase();
     return lista.filter(a => (!filtro.especie || a.especieId === filtro.especie)
       && (!filtro.sexo || a.sexo === filtro.sexo)
+      && (!filtro.grupo || (filtro.grupo === '_sen' ? !D.obter('grupos', a.grupoId) : a.grupoId === filtro.grupo))
       && (!q || [a.nome, a.crotal, a.raza].some(v => (v || '').toLowerCase().includes(q))));
   }
 
@@ -32,6 +33,7 @@ X.vAnimais = (() => {
   function tarxeta(a) {
     const e = c.especie(a), est = c.estado(a), w = c.peso(a);
     const p = est === 'activo' && D.obter('parcelas', a.parcelaId);
+    const g = est === 'activo' && D.obter('grupos', a.grupoId);
     const idade = u.idade(a.nacemento, a.falecemento || undefined);
     const chips = chipsEstado(a);
     return `<article class="tarxeta-animal ${est}" data-accion="ver-animal" data-id="${a.id}" tabindex="0">
@@ -41,11 +43,12 @@ X.vAnimais = (() => {
       </div>
       <div class="info">
         <div class="nome-fila"><h3>${u.esc(a.nome)}</h3>${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''}</div>
-        <div class="sub">${e.icono} ${u.esc(a.raza || e.nome)}${idade ? ` · ${idade}` : ''}</div>
+        <div class="sub">${c.icono(a)} ${u.esc(a.raza || e.nome)}${idade ? ` · ${idade}` : ''}</div>
         <div class="datos-mini">
           ${w != null ? `<span title="${t('pesoTeorico')}">⚖️ ${u.kg(w)}</span>` : ''}
           ${a.comidaDia ? `<span title="${t('comidaDia')}">🌾 ${u.kg(a.comidaDia)}</span>` : ''}
           ${p ? `<span title="${t('parcela')}">📍 ${u.esc(p.nome)}</span>` : ''}
+          ${g ? `<span title="${t('grupo')}">👥 ${u.esc(g.nome)}</span>` : ''}
         </div>
         ${chips ? `<div class="chips">${chips}</div>` : ''}
       </div>
@@ -66,6 +69,11 @@ X.vAnimais = (() => {
     const fChip = (campo, val, txt) => `<button class="filtro ${filtro[campo] === val ? 'activo' : ''}" data-accion="filtro-animais" data-campo="${campo}" data-valor="${val}">${txt}</button>`;
     const filtros = (usadas.length > 1 ? fChip('especie', '', t('todas')) + usadas.map(e => fChip('especie', e.id, `${e.icono} ${u.esc(e.nome)}`)).join('') + '<span class="sep"></span>' : '')
       + fChip('sexo', '', t('todos')) + fChip('sexo', 'F', '♀ ' + t('femias')) + fChip('sexo', 'M', '♂ ' + t('machos'));
+    const grupos = D.lista('grupos').sort(u.porNome);
+    if (filtro.grupo && filtro.grupo !== '_sen' && !D.obter('grupos', filtro.grupo)) filtro.grupo = '';
+    const filtrosGrupo = (grupos.length ? fChip('grupo', '', t('todosGrupos')) + grupos.map(g => fChip('grupo', g.id, `👥 ${u.esc(g.nome)}`)).join('')
+      + fChip('grupo', '_sen', t('senGrupo')) : '')
+      + `<button class="filtro xestionar" data-accion="grupos">👥 ${t('xestionarGrupos')}</button>`;
 
     const grella = l => `<div class="grella-animais">${l.map(tarxeta).join('')}</div>`;
     const grupo = (k, l, titulo) => l.length ? `<details class="grupo" data-grupo="${k}" ${abertos[k] ? 'open' : ''}>
@@ -88,7 +96,7 @@ X.vAnimais = (() => {
         <button class="btn" data-accion="escanear-dib" title="${t('escanearDib')}">${ui.ic('scan')}<span>${t('escanearDib')}</span></button>
         <button class="btn primario" data-accion="novo-animal">${ui.ic('plus')}<span>${t('novoAnimal')}</span></button>
       </div>
-      ${todos.length ? `<div class="filtros">${filtros}</div>` : ''}
+      ${todos.length ? `<div class="filtros">${filtros}</div><div class="filtros">${filtrosGrupo}</div>` : ''}
       ${corpo}`;
     main.querySelectorAll('details.grupo').forEach(d => d.addEventListener('toggle', () => { abertos[d.dataset.grupo] = d.open; }));
   }
@@ -119,6 +127,7 @@ X.vAnimais = (() => {
     if (!a) return null;
     const e = c.especie(a), est = c.estado(a), activo = est === 'activo';
     const p = D.obter('parcelas', a.parcelaId);
+    const grupo = D.obter('grupos', a.grupoId);
     const nec = c.necesidades(a);
     const r = c.repro(a);
     const crias = D.lista('animais').filter(x => x.nai === a.id || x.pai === a.id).sort((x, y) => (y.nacemento || '').localeCompare(x.nacemento || ''));
@@ -175,12 +184,13 @@ X.vAnimais = (() => {
             <span class="cambiar-foto">${ui.ic('camera')}</span>
           </label>
           <div class="ficha-resumo">
-            <div class="sub">${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''} ${e.icono} ${u.esc(e.nome)} · ${a.sexo === 'M' ? '♂ ' + t('macho') : '♀ ' + t('femia')}</div>
+            <div class="sub">${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''} ${c.icono(a)} ${u.esc(e.nome)} · ${a.sexo === 'M' ? '♂ ' + t('macho') : '♀ ' + t('femia')}</div>
             <div class="chips">${chipsEstado(a)}</div>
             <dl class="datos">
               ${a.raza ? fila(t('raza'), u.esc(a.raza) + (a.razaCodigo ? ` <small>(${u.esc(a.razaCodigo)})</small>` : '')) : ''}
               ${fila(t('nacemento'), a.nacemento ? `${u.data(a.nacemento)} <small>(${u.idade(a.nacemento, a.falecemento || undefined)})</small>` : '—')}
               ${activo ? fila(t('parcela'), p ? `<button class="enlace" data-accion="ver-parcela" data-id="${p.id}">📍 ${u.esc(p.nome)}</button>` : t('senParcela')) : ''}
+              ${grupo ? fila(t('grupo'), `<button class="enlace" data-accion="ver-grupo" data-id="${grupo.id}">👥 ${u.esc(grupo.nome)}</button>`) : ''}
               ${fila(t('comidaDia'), a.comidaDia ? `${u.kg(a.comidaDia)}` : '—')}
             </dl>
           </div>
@@ -247,6 +257,7 @@ X.vAnimais = (() => {
           ${ui.campo(t('comidaDia') + ' (kg)', ui.numero('comidaDia', a.comidaDia, `data-input="manual" ${a.comidaDia != null ? 'data-manual="1"' : ''}`),
             `${t('axudaComida')}<span class="proposta" data-proposta="comida"></span>`)}
           ${ui.campo(t('parcela'), ui.selector('parcelaId', opcionsParcelas(), a.parcelaId))}
+          ${ui.campo(t('grupo'), ui.selector('grupoId', [['', t('senGrupo')], ...D.lista('grupos').sort(u.porNome).map(g => [g.id, g.nome])], a.grupoId))}
           ${ui.campo(t('nai'), ui.selector('nai', opcionsAnimais(x => x.sexo === 'F', a.id), a.nai))}
           ${ui.campo(t('pai'), ui.selector('pai', opcionsAnimais(x => x.sexo === 'M', a.id), a.pai))}
         </div>
@@ -280,8 +291,12 @@ X.vAnimais = (() => {
   function proporComida(form) {
     const el = form.elements, inp = el.comidaDia, sp = form.querySelector('[data-proposta="comida"]');
     const prev = D.obter('animais', form.dataset.id) || {};
+    const sexo = (form.querySelector('[name=sexo]:checked') || {}).value || 'F';
+    // A icona (se non hai foto) segue á especie e ao sexo escollidos
+    const ph = form.querySelector('.form-foto .ph');
+    if (ph) { ph.textContent = c.icono({ especieId: el.especieId.value, sexo }); ph.className = `ph s-${sexo}`; }
     const p = c.comidaProposta({
-      ...prev, especieId: el.especieId.value, sexo: (form.querySelector('[name=sexo]:checked') || {}).value || 'F',
+      ...prev, especieId: el.especieId.value, sexo,
       nacemento: el.nacemento.value || null, pesoNacemento: u.num(el.pesoNacemento.value),
     });
     sp.textContent = p.mama ? ` · ${t('propostaMama', { data: u.data(p.ata) })}` : ` · ${t('propostaComida', { kg: u.kg(p.kg), peso: u.kg(p.peso) })}`;
@@ -320,7 +335,7 @@ X.vAnimais = (() => {
       ...(prev || {}), id,
       nome: s('nome'), crotal, especieId: s('especieId'), sexo, raza, razaCodigo,
       nacemento: s('nacemento'), pesoNacemento: u.num(f.get('pesoNacemento')),
-      comidaDia: u.num(f.get('comidaDia')), parcelaId: s('parcelaId'),
+      comidaDia: u.num(f.get('comidaDia')), parcelaId: s('parcelaId'), grupoId: s('grupoId'),
       nai: s('nai'), pai: s('pai'), notas: s('notas'),
       ultimoCelo: sexo === 'F' ? s('ultimoCelo') : null,
       ultimoParto: sexo === 'F' ? s('ultimoParto') : null,
