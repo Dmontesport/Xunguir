@@ -40,10 +40,13 @@ X.vAnimais = (() => {
     return `<article class="tarxeta-animal ${est}" data-accion="ver-animal" data-id="${a.id}" ${arrastre} tabindex="0">
       <div class="foto">${ui.foto(a)}
         ${est === 'vendido' ? `<span class="cinta">${t('vendido')}</span>` : ''}
-        <span class="sexo s-${a.sexo}" title="${a.sexo === 'M' ? t('macho') : t('femia')}">${a.sexo === 'M' ? '♂' : '♀'}</span>
+        <div class="cab-foto">
+          <span class="sexo s-${a.sexo}" title="${a.sexo === 'M' ? t('macho') : t('femia')}">${a.sexo === 'M' ? '♂' : '♀'}</span>
+          <h3 class="nome-foto">${u.esc(a.nome)}</h3>
+        </div>
       </div>
       <div class="info">
-        <div class="nome-fila"><h3>${u.esc(a.nome)}</h3>${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''}</div>
+        ${a.crotal ? `<div class="crotal-fila"><span class="crotal">${u.esc(a.crotal)}</span></div>` : ''}
         <div class="sub">${c.icono(a)} ${u.esc(a.raza || e.nome)}${idade ? ` · ${idade}` : ''}</div>
         <div class="datos-mini">
           ${w != null ? `<span title="${t('pesoTeorico')}">⚖️ ${u.kg(w)}</span>` : ''}
