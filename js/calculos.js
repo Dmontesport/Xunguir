@@ -116,10 +116,11 @@ X.calc = (() => {
   const checkpoint = p => ({ ...p, stock: stock(p), stockData: u.hoxe() });
 
   // ---- Almacén ----
-  // Tipos de lote: 'alpaca' (cadrada) e 'rolo' contan unidades; 'silo' conta kg.
+  // Tipos de lote: 'alpaca' (cadrada), 'rolo' e 'microsilo' (rolo envolto en plástico branco)
+  // contan unidades; 'silo' conta kg.
   // Os lotes antigos tiñan o tipo en texto libre ("Alpaca", "Bóla de silo", "Rolo"…)
-  const tipoLote = l => ['alpaca', 'rolo', 'silo'].includes(l.tipo) ? l.tipo
-    : /rol|bóla|bola|silo/i.test(l.tipo || '') ? 'rolo' : 'alpaca';
+  const tipoLote = l => ['alpaca', 'rolo', 'microsilo', 'silo'].includes(l.tipo) ? l.tipo
+    : /bóla|bola|silo/i.test(l.tipo || '') ? 'microsilo' : /rol/i.test(l.tipo || '') ? 'rolo' : 'alpaca';
   const totalLote = l => tipoLote(l) === 'silo' ? (+l.kg || 0) : (+l.unidades || 0);
   const gastadas = l => (l.consumos || []).reduce((s, c) => s + (+c.n || 0), 0);
   const restantes = l => Math.max(0, totalLote(l) - gastadas(l));

@@ -4,8 +4,8 @@
 X.vParcelas = (() => {
   const u = X.u, ui = X.ui, c = X.calc, D = X.datos;
   const t = (...a) => X.t(...a);
-  const TIPOS = ['alpaca', 'rolo', 'silo'];
-  const PLURAL = { alpaca: 'alpacas', rolo: 'rolos', silo: 'silo' };
+  const TIPOS = ['alpaca', 'rolo', 'microsilo', 'silo'];
+  const PLURAL = { alpaca: 'alpacas', rolo: 'rolos', microsilo: 'microsilos', silo: 'silo' };
 
   const iconaUnidade = tp => `<span class="unidade u-${tp}" aria-hidden="true"></span>`;
   const nomeLote = l => l.nome || t(c.tipoLote(l));
@@ -95,8 +95,9 @@ X.vParcelas = (() => {
   function filaLote(l) {
     const tp = c.tipoLote(l), p = D.obter('parcelas', l.parcelaId), rest = c.restantes(l);
     return `<div class="lote ${rest ? '' : 'esgotado'}" data-accion="ver-lote" data-id="${l.id}" role="button" tabindex="0">
+      <span class="lote-icona" title="${t(tp)}">${iconaUnidade(tp)}</span>
       <div class="lote-info">
-        <b>${iconaUnidade(tp)} ${u.esc(nomeLote(l))}</b>
+        <b>${u.esc(nomeLote(l))}</b>
         <small>${t(tp)} · ${p ? u.esc(p.nome) : l.parcelaId ? '—' : t('comprado')} · ${u.data(l.data)}${tp !== 'silo' && l.kgUnidade ? ` · ${u.kg(l.kgUnidade)}/u` : ''}</small>
       </div>
       ${visualLote(l)}
@@ -111,7 +112,7 @@ X.vParcelas = (() => {
   function seccionAlmacen() {
     const lotes = D.lista('lotes').sort((a, b) => (b.data || '').localeCompare(a.data || ''));
     const activos = lotes.filter(l => c.restantes(l) > 0), esgotados = lotes.filter(l => !c.restantes(l));
-    const tot = { alpaca: 0, rolo: 0, silo: 0 };
+    const tot = { alpaca: 0, rolo: 0, microsilo: 0, silo: 0 };
     activos.forEach(l => { tot[c.tipoLote(l)] += c.restantes(l); });
     const totais = TIPOS.filter(tp => tot[tp] > 0);
     return `<section class="seccion-parcelas" id="almacen">
@@ -197,6 +198,9 @@ X.vParcelas = (() => {
           : `<p class="nota">${t('senAnimaisParcela')}</p>`}
           <div class="botons"><button class="btn primario" data-accion="asignar" data-id="${p.id}">${ui.ic('plus')}<span>${t('asignarAnimais')}</span></button></div>
         </section>`;
+      // Lotes que saíron desta parcela cando se colleitaba
+      const lotes = D.lista('lotes').filter(l => l.parcelaId === p.id).sort((a, b) => b.data.localeCompare(a.data));
+      if (lotes.length) corpo += `<section class="seccion"><h3>${t('colleitas')}</h3><div class="lotes">${lotes.map(filaLote).join('')}</div></section>`;
     }
     return `${ui.cab(u.esc(p.nome))}
       <div class="modal-corpo ficha">${campoVisual(p, true)}${corpo}
@@ -448,6 +452,10 @@ X.vParcelas = (() => {
   };
 
   // ---------- Almacén ----------
+  // Orixe dun lote: comprado ou calquera parcela (unha de pasto puido estar antes para colleitar)
+  const opcionsOrixe = () => [['', t('comprado')],
+    ...D.lista('parcelas').sort(u.porNome).map(p => [p.id, `${p.tipo === 'forraxe' ? '🌾' : '🌿'} ${p.nome}`])];
+
   function formLote(l) {
     const novo = !l;
     l = l || { data: u.hoxe(), tipo: 'alpaca' };
@@ -457,7 +465,7 @@ X.vParcelas = (() => {
         ${camposLote(l)}
         <div class="grella-campos">
           ${ui.campo(t('data'), ui.dataInp('data', l.data, 'required'))}
-          ${novo ? '' : ui.campo(t('orixe'), ui.selector('parcelaId', [['', t('comprado')], ...D.lista('parcelas').filter(p => p.tipo === 'forraxe').map(p => [p.id, p.nome])], l.parcelaId))}
+          ${ui.campo(t('orixe'), ui.selector('parcelaId', opcionsOrixe(), l.parcelaId))}
         </div>
         ${ui.campo(t('notas'), ui.entrada('notas', l.notas))}
       </div>
@@ -524,7 +532,7 @@ X.vParcelas = (() => {
     if (!datos) return;
     D.gardar('lotes', {
       consumos: [], ...(prev || {}), id, ...datos, data: f.get('data'),
-      parcelaId: prev ? (f.get('parcelaId') || null) : null, notas: (f.get('notas') || '').trim() || null,
+      parcelaId: f.get('parcelaId') || null, notas: (f.get('notas') || '').trim() || null,
     });
     verLote(id);
   };
