@@ -12,7 +12,7 @@ X.vAnimais = (() => {
     const q = filtro.q.trim().toLowerCase();
     return lista.filter(a => (!filtro.especie || a.especieId === filtro.especie)
       && (!filtro.sexo || a.sexo === filtro.sexo)
-      && (!filtro.grupo || (filtro.grupo === '_sen' ? !D.obter('grupos', a.grupoId) : a.grupoId === filtro.grupo))
+      && (!filtro.grupo || (filtro.grupo === '_sen' ? !X.vGrupos.gruposVivos(a).length : X.vGrupos.estaEn(a, filtro.grupo)))
       && (!q || [a.nome, a.crotal, a.raza].some(v => (v || '').toLowerCase().includes(q))));
   }
 
@@ -33,10 +33,11 @@ X.vAnimais = (() => {
   function tarxeta(a) {
     const e = c.especie(a), est = c.estado(a), w = c.peso(a);
     const p = est === 'activo' && D.obter('parcelas', a.parcelaId);
-    const g = est === 'activo' && D.obter('grupos', a.grupoId);
+    const gs = est === 'activo' ? X.vGrupos.gruposVivos(a) : [];
     const idade = u.idade(a.nacemento, a.falecemento || undefined);
     const chips = chipsEstado(a);
-    return `<article class="tarxeta-animal ${est}" data-accion="ver-animal" data-id="${a.id}" tabindex="0">
+    const arrastre = est === 'activo' ? 'data-arrastrable data-soltar="animal"' : '';
+    return `<article class="tarxeta-animal ${est}" data-accion="ver-animal" data-id="${a.id}" ${arrastre} tabindex="0">
       <div class="foto">${ui.foto(a)}
         ${est === 'vendido' ? `<span class="cinta">${t('vendido')}</span>` : ''}
         <span class="sexo s-${a.sexo}" title="${a.sexo === 'M' ? t('macho') : t('femia')}">${a.sexo === 'M' ? '♂' : '♀'}</span>
@@ -48,7 +49,7 @@ X.vAnimais = (() => {
           ${w != null ? `<span title="${t('pesoTeorico')}">⚖️ ${u.kg(w)}</span>` : ''}
           ${a.comidaDia ? `<span title="${t('comidaDia')}">🌾 ${u.kg(a.comidaDia)}</span>` : ''}
           ${p ? `<span title="${t('parcela')}">📍 ${u.esc(p.nome)}</span>` : ''}
-          ${g ? `<span title="${t('grupo')}">👥 ${u.esc(g.nome)}</span>` : ''}
+          ${gs.length ? `<span title="${t('grupos')}">👥 ${u.esc(gs.map(g => g.nome).join(', '))}</span>` : ''}
         </div>
         ${chips ? `<div class="chips">${chips}</div>` : ''}
       </div>
@@ -71,7 +72,8 @@ X.vAnimais = (() => {
       + fChip('sexo', '', t('todos')) + fChip('sexo', 'F', '♀ ' + t('femias')) + fChip('sexo', 'M', '♂ ' + t('machos'));
     const grupos = D.lista('grupos').sort(u.porNome);
     if (filtro.grupo && filtro.grupo !== '_sen' && !D.obter('grupos', filtro.grupo)) filtro.grupo = '';
-    const filtrosGrupo = (grupos.length ? fChip('grupo', '', t('todosGrupos')) + grupos.map(g => fChip('grupo', g.id, `👥 ${u.esc(g.nome)}`)).join('')
+    const filtrosGrupo = (grupos.length ? fChip('grupo', '', t('todosGrupos')) + grupos.map(g => fChip('grupo', g.id, `👥 ${u.esc(g.nome)}`)
+      .replace('<button ', `<button data-soltar="grupo" data-grupo="${g.id}" `)).join('')
       + fChip('grupo', '_sen', t('senGrupo')) : '')
       + `<button class="filtro xestionar" data-accion="grupos">👥 ${t('xestionarGrupos')}</button>`;
 
@@ -127,7 +129,7 @@ X.vAnimais = (() => {
     if (!a) return null;
     const e = c.especie(a), est = c.estado(a), activo = est === 'activo';
     const p = D.obter('parcelas', a.parcelaId);
-    const grupo = D.obter('grupos', a.grupoId);
+    const grupos = X.vGrupos.gruposVivos(a);
     const nec = c.necesidades(a);
     const r = c.repro(a);
     const crias = D.lista('animais').filter(x => x.nai === a.id || x.pai === a.id).sort((x, y) => (y.nacemento || '').localeCompare(x.nacemento || ''));
@@ -190,7 +192,7 @@ X.vAnimais = (() => {
               ${a.raza ? fila(t('raza'), u.esc(a.raza) + (a.razaCodigo ? ` <small>(${u.esc(a.razaCodigo)})</small>` : '')) : ''}
               ${fila(t('nacemento'), a.nacemento ? `${u.data(a.nacemento)} <small>(${u.idade(a.nacemento, a.falecemento || undefined)})</small>` : '—')}
               ${activo ? fila(t('parcela'), p ? `<button class="enlace" data-accion="ver-parcela" data-id="${p.id}">📍 ${u.esc(p.nome)}</button>` : t('senParcela')) : ''}
-              ${grupo ? fila(t('grupo'), `<button class="enlace" data-accion="ver-grupo" data-id="${grupo.id}">👥 ${u.esc(grupo.nome)}</button>`) : ''}
+              ${grupos.length ? fila(t('grupos'), grupos.map(g => `<button class="enlace" data-accion="ver-grupo" data-id="${g.id}">👥 ${u.esc(g.nome)}</button>`).join('<br>')) : ''}
               ${fila(t('comidaDia'), a.comidaDia ? `${u.kg(a.comidaDia)}` : '—')}
             </dl>
           </div>
@@ -257,7 +259,8 @@ X.vAnimais = (() => {
           ${ui.campo(t('comidaDia') + ' (kg)', ui.numero('comidaDia', a.comidaDia, `data-input="manual" ${a.comidaDia != null ? 'data-manual="1"' : ''}`),
             `${t('axudaComida')}<span class="proposta" data-proposta="comida"></span>`)}
           ${ui.campo(t('parcela'), ui.selector('parcelaId', opcionsParcelas(), a.parcelaId))}
-          ${ui.campo(t('grupo'), ui.selector('grupoId', [['', t('senGrupo')], ...D.lista('grupos').sort(u.porNome).map(g => [g.id, g.nome])], a.grupoId))}
+          ${D.lista('grupos').length ? ui.campo(t('grupos'), `<div class="chips-check">${D.lista('grupos').sort(u.porNome).map(g =>
+            `<label><input type="checkbox" name="grupos" value="${g.id}" ${X.vGrupos.estaEn(a, g.id) ? 'checked' : ''}><span>👥 ${u.esc(g.nome)}</span></label>`).join('')}</div>`) : ''}
           ${ui.campo(t('nai'), ui.selector('nai', opcionsAnimais(x => x.sexo === 'F', a.id), a.nai))}
           ${ui.campo(t('pai'), ui.selector('pai', opcionsAnimais(x => x.sexo === 'M', a.id), a.pai))}
         </div>
@@ -335,7 +338,7 @@ X.vAnimais = (() => {
       ...(prev || {}), id,
       nome: s('nome'), crotal, especieId: s('especieId'), sexo, raza, razaCodigo,
       nacemento: s('nacemento'), pesoNacemento: u.num(f.get('pesoNacemento')),
-      comidaDia: u.num(f.get('comidaDia')), parcelaId: s('parcelaId'), grupoId: s('grupoId'),
+      comidaDia: u.num(f.get('comidaDia')), parcelaId: s('parcelaId'), grupos: f.getAll('grupos'),
       nai: s('nai'), pai: s('pai'), notas: s('notas'),
       ultimoCelo: sexo === 'F' ? s('ultimoCelo') : null,
       ultimoParto: sexo === 'F' ? s('ultimoParto') : null,
@@ -350,6 +353,7 @@ X.vAnimais = (() => {
     const ficheiro = f.get('foto');
     if (ficheiro && ficheiro.size) a.foto = await X.fotos.engadir(id, ficheiro);
     a.historial = eventos(prev, a);
+    delete a.grupoId; // formato antigo (un só grupo)
     D.gardarAnimal(a);
     ui.toast(t('gardado'), 'ok');
     verFicha(id);

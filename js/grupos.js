@@ -1,12 +1,18 @@
 'use strict';
 
 // Grupos de animais (p. ex. "Vacas paridas", "Xatos"): para filtralos e movelos xuntos de parcela.
-// Cada animal pode estar nun só grupo (campo `grupoId`).
+// Un animal pode estar en varios grupos (campo `grupos`, lista de ids).
 X.vGrupos = (() => {
   const u = X.u, ui = X.ui, c = X.calc, D = X.datos;
   const t = (...a) => X.t(...a);
 
-  const membros = g => D.lista('animais').filter(a => a.grupoId === g.id && c.activo(a)).sort(u.porNome);
+  // Os animais gardados coa versión anterior teñen `grupoId` (un só grupo)
+  const gruposDe = a => Array.isArray(a.grupos) ? a.grupos : (a.grupoId ? [a.grupoId] : []);
+  const estaEn = (a, gid) => gruposDe(a).includes(gid);
+  const conGrupos = (a, ids) => { const r = { ...a, grupos: [...new Set(ids)] }; delete r.grupoId; return r; };
+  const gruposVivos = a => gruposDe(a).map(id => D.obter('grupos', id)).filter(Boolean);
+
+  const membros = g => D.lista('animais').filter(a => estaEn(a, g.id) && c.activo(a)).sort(u.porNome);
 
   // Onde está o grupo: unha parcela, sen parcela ou repartido
   function ubicacion(g) {
@@ -54,7 +60,7 @@ X.vGrupos = (() => {
           ${an.length ? `<ul class="lista-animais">${an.map(a => `<li>
             <button class="mini-animal" data-accion="ver-animal" data-id="${a.id}"><span class="foto">${ui.foto(a)}</span>
               <span>${u.esc(a.nome)}<small>${a.crotal ? u.esc(a.crotal) : ''}</small></span></button>
-            <button class="btn-icono peq" data-accion="quitar-do-grupo" data-id="${a.id}" aria-label="${t('quitar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`
+            <button class="btn-icono peq" data-accion="quitar-do-grupo" data-id="${a.id}" data-grupo="${g.id}" aria-label="${t('quitar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`
           : `<p class="nota">${t('senMembros')}</p>`}
         </section>
         ${g.notas ? `<section class="seccion"><h3>${t('notas')}</h3><p class="notas">${u.esc(g.notas)}</p></section>` : ''}
@@ -66,22 +72,37 @@ X.vGrupos = (() => {
   const verFicha = id => ui.modal.mostrar(() => ficha(id), verLista);
 
   // ---------- Formulario ----------
-  function formulario(g) {
+  // `iniciais`: animais que entran no grupo novo (p. ex. ao soltar unha tarxeta enriba doutra)
+  function formulario(g, iniciais = []) {
     const novo = !g;
     g = g || {};
+    const nomes = iniciais.map(id => (D.obter('animais', id) || {}).nome).filter(Boolean);
     ui.modal.abrir(`<form data-form="grupo" data-id="${g.id || ''}" class="modal-form peq">
-      ${ui.cab(novo ? t('novoGrupo') : t('editarGrupo'), true)}
-      <div class="modal-corpo"><div class="grella-campos">
-        ${ui.campo(t('nome') + ' *', ui.entrada('nome', g.nome, `required autofocus autocomplete="off" placeholder="${t('exemploGrupo')}"`))}
+      ${ui.cab(novo ? t('novoGrupo') : t('editarGrupo'), !iniciais.length)}
+      <div class="modal-corpo">
+        ${nomes.length ? `<p class="nota">${t('grupoCon', { nomes: u.esc(nomes.join(', ')) })}</p>` : ''}
+        ${iniciais.map(id => `<input type="hidden" name="membro" value="${id}">`).join('')}
+        <div class="grella-campos">
+          ${ui.campo(t('nome') + ' *', ui.entrada('nome', g.nome, `required autofocus autocomplete="off" placeholder="${t('exemploGrupo')}"`))}
+        </div>
+        ${ui.campo(t('notas'), `<textarea name="notas" rows="3">${u.esc(g.notas || '')}</textarea>`)}
       </div>
-      ${ui.campo(t('notas'), `<textarea name="notas" rows="3">${u.esc(g.notas || '')}</textarea>`)}</div>
-      ${ui.pe(ui.btnCancelar() + ui.btnGardar())}</form>`, { volver: novo ? verLista : () => verFicha(g.id) });
+      ${ui.pe(`<button type="button" class="btn" data-accion="${iniciais.length ? 'pechar' : 'volver'}">${t('cancelar')}</button>` + ui.btnGardar())}</form>`,
+    { volver: novo ? verLista : () => verFicha(g.id) });
   }
 
   X.formularios.grupo = form => {
     const f = new FormData(form), id = form.dataset.id || u.uid(), novo = !form.dataset.id;
-    D.gardar('grupos', { ...(D.obter('grupos', id) || {}), id, nome: (f.get('nome') || '').trim(), notas: (f.get('notas') || '').trim() || null });
-    if (novo) abrirMembros(id); else verFicha(id);
+    const iniciais = f.getAll('membro');
+    D.lote(() => {
+      D.gardar('grupos', { ...(D.obter('grupos', id) || {}), id, nome: (f.get('nome') || '').trim(), notas: (f.get('notas') || '').trim() || null });
+      iniciais.forEach(aid => { const a = D.obter('animais', aid); if (a && !estaEn(a, id)) D.gardarAnimal(conGrupos(a, [...gruposDe(a), id])); });
+    });
+    if (novo && !iniciais.length) abrirMembros(id);
+    else {
+      if (iniciais.length) ui.toast(t('grupoCreado', { nome: (f.get('nome') || '').trim() }), 'ok');
+      verFicha(id);
+    }
   };
 
   // ---------- Engadir / quitar animais ----------
@@ -91,10 +112,10 @@ X.vGrupos = (() => {
     ui.modal.abrir(`<form data-form="membros-grupo" data-id="${g.id}" class="modal-form">
       ${ui.cab(t('membrosDe', { nome: u.esc(g.nome) }), true)}
       <div class="modal-corpo">${an.length ? `<div class="lista-check">${an.map(a => {
-        const outro = a.grupoId && a.grupoId !== g.id && D.obter('grupos', a.grupoId);
-        return `<label class="check-animal"><input type="checkbox" name="a" value="${a.id}" ${a.grupoId === g.id ? 'checked' : ''}>
+        const outros = gruposVivos(a).filter(x => x.id !== g.id);
+        return `<label class="check-animal"><input type="checkbox" name="a" value="${a.id}" ${estaEn(a, g.id) ? 'checked' : ''}>
           <span class="foto">${ui.foto(a)}</span>
-          <span class="txt"><b>${u.esc(a.nome)}</b><small>${a.crotal ? u.esc(a.crotal) : ''}${outro ? ` · 👥 ${u.esc(outro.nome)}` : ''}</small></span></label>`;
+          <span class="txt"><b>${u.esc(a.nome)}</b><small>${a.crotal ? u.esc(a.crotal) : ''}${outros.length ? ` · 👥 ${u.esc(outros.map(x => x.nome).join(', '))}` : ''}</small></span></label>`;
       }).join('')}</div>` : `<p class="nota">${t('senAnimaisActivos')}</p>`}</div>
       ${ui.pe(ui.btnCancelar() + ui.btnGardar())}</form>`, { volver: () => verFicha(g.id) });
   }
@@ -103,12 +124,21 @@ X.vGrupos = (() => {
     const id = form.dataset.id, sel = new Set(new FormData(form).getAll('a'));
     D.lote(() => {
       for (const a of D.lista('animais').filter(c.activo)) {
-        const novo = sel.has(a.id) ? id : (a.grupoId === id ? null : a.grupoId || null);
-        if (novo !== (a.grupoId || null)) D.gardarAnimal({ ...a, grupoId: novo });
+        if (sel.has(a.id) === estaEn(a, id)) continue;
+        D.gardarAnimal(conGrupos(a, sel.has(a.id) ? [...gruposDe(a), id] : gruposDe(a).filter(x => x !== id)));
       }
     });
     verFicha(id);
   };
+
+  // Engade un animal a un grupo (ao soltar a tarxeta enriba do grupo)
+  function engadir(animalId, gid) {
+    const a = D.obter('animais', animalId), g = D.obter('grupos', gid);
+    if (!a || !g) return;
+    if (estaEn(a, gid)) { ui.toast(t('xaNoGrupo', { nome: a.nome, grupo: g.nome })); return; }
+    D.gardarAnimal(conGrupos(a, [...gruposDe(a), gid]));
+    ui.toast(t('engadidoAoGrupo', { nome: a.nome, grupo: g.nome }), 'ok', { texto: t('desfacer'), fn: () => D.gardarAnimal(a) });
+  }
 
   // ---------- Mover o grupo enteiro de parcela ----------
   X.accions['mover-grupo'] = el => {
@@ -137,26 +167,27 @@ X.vGrupos = (() => {
   X.accions['membros-grupo'] = el => abrirMembros(el.dataset.id);
   X.accions['quitar-do-grupo'] = el => {
     const a = D.obter('animais', el.dataset.id);
-    D.gardarAnimal({ ...a, grupoId: null });
+    D.gardarAnimal(conGrupos(a, gruposDe(a).filter(x => x !== el.dataset.grupo)));
   };
   X.accions['borrar-grupo'] = async el => {
     const g = D.obter('grupos', el.dataset.id);
     if (!await ui.confirmar(t('confBorrarGrupo', { nome: g.nome }), { aceptar: t('eliminar'), perigo: true })) return;
     D.lote(() => {
-      D.lista('animais').filter(a => a.grupoId === g.id).forEach(a => D.gardar('animais', { ...a, grupoId: null }));
+      D.lista('animais').filter(a => estaEn(a, g.id)).forEach(a => D.gardar('animais', conGrupos(a, gruposDe(a).filter(x => x !== g.id))));
       D.borrar('grupos', g.id);
     });
     verLista();
   };
 
-  // Reparte unha lista de animais por grupos: [{ grupo, animais }], cos que non teñen grupo ao final (grupo = null)
+  // Reparte unha lista de animais por grupos: [{ grupo, animais }]. Un animal pode saír en varios;
+  // os que non teñen ningún grupo van ao final (grupo = null)
   function repartir(lista) {
     const gs = D.lista('grupos').sort(u.porNome);
-    const r = gs.map(g => ({ grupo: g, animais: lista.filter(a => a.grupoId === g.id) })).filter(b => b.animais.length);
-    const sen = lista.filter(a => !gs.some(g => g.id === a.grupoId));
+    const r = gs.map(g => ({ grupo: g, animais: lista.filter(a => estaEn(a, g.id)) })).filter(b => b.animais.length);
+    const sen = lista.filter(a => !gs.some(g => estaEn(a, g.id)));
     if (sen.length) r.push({ grupo: null, animais: sen });
     return r;
   }
 
-  return { membros, repartir, verFicha, verLista };
+  return { gruposDe, gruposVivos, estaEn, conGrupos, membros, repartir, engadir, novo: ids => formulario(null, ids), verFicha, verLista };
 })();

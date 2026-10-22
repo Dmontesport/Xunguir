@@ -336,14 +336,20 @@ X.vParcelas = (() => {
     g.checked = n === caixas.length;
     g.indeterminate = n > 0 && n < caixas.length;
   }
+  // Un animal en varios grupos sae varias veces: todas as súas caixas van xuntas
+  function marcar(id, v) {
+    document.querySelectorAll(`#modal input[name=a][value="${id}"]`).forEach(i => { i.checked = v; });
+  }
+  const sincronizarTodo = () => document.querySelectorAll('#modal .bloque-grupo').forEach(sincronizarGrupo);
   X.cambios['check-grupo'] = el => {
-    el.closest('.bloque-grupo').querySelectorAll('input[name=a]').forEach(i => { i.checked = el.checked; });
+    el.closest('.bloque-grupo').querySelectorAll('input[name=a]').forEach(i => marcar(i.value, el.checked));
+    sincronizarTodo();
   };
-  X.cambios['check-animal'] = el => sincronizarGrupo(el.closest('.bloque-grupo'));
+  X.cambios['check-animal'] = el => { marcar(el.value, el.checked); sincronizarTodo(); };
 
   X.accions['quitar-grupo-parcela'] = el => {
     const p = D.obter('parcelas', el.dataset.id);
-    D.lote(() => c.animaisParcela(p).filter(a => a.grupoId === el.dataset.grupo).forEach(a => D.gardarAnimal({ ...a, parcelaId: null })));
+    D.lote(() => c.animaisParcela(p).filter(a => X.vGrupos.estaEn(a, el.dataset.grupo)).forEach(a => D.gardarAnimal({ ...a, parcelaId: null })));
   };
   X.formularios.asignar = form => {
     const p = D.obter('parcelas', form.dataset.id);

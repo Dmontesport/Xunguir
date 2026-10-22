@@ -403,6 +403,41 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
 .check-grupo input { width: 20px; height: 20px; accent-color: var(--primario); flex: none; }
 .bloque-grupo:has(.check-grupo) .lista-check { padding-left: 14px; border-left: 2px solid var(--borde); margin-left: 9px; }
 
+.chips-check { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips-check input { position: absolute; opacity: 0; pointer-events: none; }
+.chips-check span {
+  display: inline-flex; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--borde);
+  background: var(--superficie); color: var(--texto-2); font-weight: 600; font-size: .88rem; cursor: pointer;
+}
+.chips-check input:checked + span { background: var(--primario-suave); border-color: var(--primario); color: var(--primario); }
+.chips-check input:focus-visible + span { outline: 2px solid var(--primario); }
+
+/* ---------- Arrastrar tarxetas ---------- */
+.tarxeta-animal[data-arrastrable] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.tarxeta-animal img { -webkit-user-drag: none; }
+.modo-arrastre { -webkit-user-select: none; user-select: none; cursor: grabbing; }
+.tarxeta-animal.arrastrando { opacity: .35; transform: scale(.97); }
+.tarxeta-animal.sobre { outline: 3px dashed var(--primario); outline-offset: 3px; transform: scale(1.03); }
+.filtro.sobre, .destino.sobre { background: var(--primario); border-color: var(--primario); color: #fff; transform: scale(1.08); }
+.fantasma-arrastre {
+  position: fixed; left: 0; top: 0; z-index: 200; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 99px;
+  background: var(--superficie); box-shadow: var(--sombra-alta); font-size: .9rem;
+}
+.barra-soltar {
+  position: fixed; z-index: 150; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--superficie); border-top: 1px solid var(--borde); box-shadow: 0 -6px 24px rgba(0, 0, 0, .15);
+  max-height: 40vh; overflow: auto;
+}
+.barra-soltar p { margin: 0 0 8px; font-size: .84rem; color: var(--texto-2); }
+.barra-soltar .destinos { display: flex; flex-wrap: wrap; gap: 8px; }
+.destino {
+  display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 12px;
+  border: 1px solid var(--borde); background: var(--superficie-2); font-weight: 600; transition: transform .1s;
+}
+.destino.novo { border-style: dashed; color: var(--primario); }
+.destino.novo .ic { width: 16px; height: 16px; }
+
 /* ---------- Lector DIB ---------- */
 .escaner { position: relative; aspect-ratio: 4 / 3; background: #000; border-radius: var(--raio); overflow: hidden; }
 .escaner video { width: 100%; height: 100%; object-fit: cover; display: block; }
