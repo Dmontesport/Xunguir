@@ -125,7 +125,16 @@ X.vAnimais = (() => {
   }
 
   const NOMES_EVENTO = { celo: 'evCelo', cubricion: 'evCubricion', parto: 'evParto' };
-  const RE_CROTAL = /^[A-Z]{2}\d{12}$/; // formato oficial: gárdase sen espazos e en maiúsculas
+
+  // Ganancia diaria: en gramos se é menos de 1 kg, para que non se redondee a 0
+  function textoGanancia(nec) {
+    const g = nec.ganancia, abs = Math.abs(g);
+    if (abs < 0.0005) return nec.adulto ? t('estableAdulto') : `0 g/${t('dia')}`;
+    const sig = g > 0 ? '+' : '−';
+    return abs < 1 ? `${sig}${Math.round(abs * 1000)} g/${t('dia')}` : `${sig}${u.kg(abs)}/${t('dia')}`;
+  }
+  // formatos oficiais (ES + 12 cifras ou UELN dos equinos): gárdanse sen espazos e en maiúsculas
+  const RE_CROTAL = /^(?:[A-Z]{2}\d{12}|\d{3}[A-Z0-9]{12})$/;
 
   function ficha(id) {
     const a = D.obter('animais', id);
@@ -158,7 +167,7 @@ X.vAnimais = (() => {
     const pesoSec = `<section class="seccion"><h3>${t('peso')}</h3>
       ${nec ? `<div class="peso-grande"><b>${u.kg(nec.peso)}</b><small>${t('pesoTeoricoEstimado')}</small></div>
         <dl class="datos">
-          ${activo ? fila(t('gananciaActual'), `${nec.ganancia >= 0 ? '+' : '−'}${u.kg(Math.abs(nec.ganancia))}/${t('dia')}`) : ''}
+          ${activo ? fila(t('gananciaActual'), textoGanancia(nec)) : ''}
           ${activo ? fila(t('comidaMantemento'), `${u.kg(nec.mant)}/${t('dia')}`) : ''}
           ${activo ? fila(t('comidaOptima'), `${u.kg(nec.optima)}/${t('dia')}`) : ''}
         </dl>
@@ -236,12 +245,14 @@ X.vAnimais = (() => {
   const opcionsParcelas = () => [['', t('senParcela')], ...D.lista('parcelas').filter(p => p.tipo !== 'forraxe').sort(u.porNome).map(p => [p.id, p.nome])];
   const opcionsEspecies = () => D.lista('especies').sort(u.porNome).map(e => [e.id, `${e.icono} ${e.nome}`]);
 
-  // Nomes de raza coñecidos: os da táboa de códigos e os xa usados
-  function nomesRazas() {
-    const r = new Set(Object.values(D.config().razas || {}));
-    D.lista('animais').forEach(a => a.raza && r.add(a.raza));
+  // Nomes de raza coñecidos para unha especie: os da táboa de códigos (da súa especie DIB) e os xa usados
+  function nomesRazas(especieId) {
+    const dib = X.razas.codigoEspecie(D.obter('especies', especieId));
+    const r = new Set(X.razas.lista().filter(x => !x.dib || x.dib === dib).map(x => x.nome));
+    D.lista('animais').forEach(a => a.raza && a.especieId === especieId && r.add(a.raza));
     return [...r].sort((x, y) => x.localeCompare(y));
   }
+  const opcionsRazas = especieId => nomesRazas(especieId).map(n => `<option value="${u.esc(n)}">`).join('');
 
   // `a` sen id = animal novo (pode traer datos xa cubertos, p. ex. dun DIB)
   function formulario(a) {
@@ -249,8 +260,7 @@ X.vAnimais = (() => {
     a = a || {};
     a = { sexo: 'F', especieId: (D.lista('especies')[0] || {}).id, ...a };
     const v = a.venda || {};
-    const razas = D.config().razas || {};
-    const axudaRaza = a.razaCodigo ? (razas[a.razaCodigo] ? t('codigoRaza', { cod: a.razaCodigo }) : t('razaDesconecida', { cod: a.razaCodigo })) : '';
+    const axudaRaza = a.razaCodigo ? (X.razas.info(a.razaCodigo) ? t('codigoRaza', { cod: a.razaCodigo }) : t('razaDesconecida', { cod: a.razaCodigo })) : '';
     return `<form data-form="animal" data-id="${a.id || ''}" data-sexo="${a.sexo}" class="modal-form">
       ${ui.cab(novo ? t('novoAnimal') : t('editarAnimal'), !novo)}
       <div class="modal-corpo">
@@ -266,7 +276,7 @@ X.vAnimais = (() => {
         <div class="grella-campos">
           ${ui.campo(t('especie'), ui.selector('especieId', opcionsEspecies(), a.especieId, 'data-cambio="especie-animal"'))}
           ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="listaRazas" autocomplete="off"')
-            + `<datalist id="listaRazas">${nomesRazas().map(n => `<option value="${u.esc(n)}">`).join('')}</datalist>`
+            + `<datalist id="listaRazas">${opcionsRazas(a.especieId)}</datalist>`
             + `<input type="hidden" name="razaCodigo" value="${u.esc(a.razaCodigo || '')}">`, axudaRaza)}
           ${ui.campo(t('sexo'), `<div class="segmentado">
             <label><input type="radio" name="sexo" value="F" ${a.sexo !== 'M' ? 'checked' : ''} data-cambio="sexo"><span>♀ ${t('femia')}</span></label>
@@ -323,7 +333,11 @@ X.vAnimais = (() => {
     if (!inp.dataset.manual) inp.value = p.mama ? '' : p.kg;
   }
   X.cambios['proposta-comida'] = el => proporComida(el.form);
-  X.cambios['especie-animal'] = el => { proporComida(el.form); actualizarPais(el.form); };
+  X.cambios['especie-animal'] = el => {
+    proporComida(el.form);
+    actualizarPais(el.form);
+    el.form.querySelector('#listaRazas').innerHTML = opcionsRazas(el.value);
+  };
 
   // Engade ao historial os eventos reprodutivos que cambiaron
   function eventos(prev, a) {
@@ -346,11 +360,13 @@ X.vAnimais = (() => {
     if (dup) { ui.toast(t('crotalDuplicado', { id: crotal, nome: dup.nome }), 'erro'); return; }
 
     // Raza: código pola táboa (busca polo nome) ou o lido do DIB; se o código era descoñecido, apréndeo
-    const razas = D.config().razas || {}, raza = s('raza');
-    const codLido = s('razaCodigo');
-    const codPorNome = raza && Object.keys(razas).find(k => razas[k].toLowerCase() === raza.toLowerCase());
-    const razaCodigo = codPorNome || (codLido && !razas[codLido] ? codLido : null);
-    if (raza && razaCodigo && !razas[razaCodigo]) D.gardarConfig({ razas: { ...razas, [razaCodigo]: raza } });
+    // e asóciaa á especie do animal, para deducir a especie a próxima vez que se escanee
+    const raza = s('raza'), codLido = s('razaCodigo');
+    const razaCodigo = X.razas.codigoPorNome(raza) || (codLido && !X.razas.info(codLido) ? codLido : null);
+    const dibEspecie = X.razas.codigoEspecie(D.obter('especies', s('especieId')));
+    const infoRaza = razaCodigo && X.razas.info(razaCodigo);
+    if (raza && razaCodigo && (!infoRaza || !infoRaza.dib)) X.razas.gardar(razaCodigo, infoRaza ? infoRaza.nome : raza, dibEspecie, s('especieId'));
+    if (codLido) X.dib.lembrarEspecie(s('especieId'));
 
     const a = {
       ...(prev || {}), id,

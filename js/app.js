@@ -111,7 +111,7 @@ X.app = (() => {
       fn(el, e);
     });
     document.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && e.target.matches('article[data-accion]')) e.target.click();
+      if (e.key === 'Enter' && e.target.matches('article[data-accion], [role=button][data-accion]')) e.target.click();
     });
     document.addEventListener('submit', async e => {
       const f = e.target.closest('form[data-form]');

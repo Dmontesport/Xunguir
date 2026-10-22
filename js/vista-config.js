@@ -55,9 +55,10 @@ X.vConfig = (() => {
         <div class="seccion-cab"><h2>${t('especies')}</h2>
           <button class="btn" data-accion="nova-especie">${ui.ic('plus')}<span>${t('novaEspecie')}</span></button></div>
         <div class="taboa-scroll"><table class="taboa">
-          <thead><tr><th></th><th>${t('nome')}</th><th>${t('ciclo')}</th><th>${t('xestacion')}</th><th>${t('pesoAdulto')} ♀/♂</th><th>${t('animais')}</th><th></th></tr></thead>
+          <thead><tr><th></th><th>${t('nome')}</th><th>${t('codigoDib')}</th><th>${t('ciclo')}</th><th>${t('xestacion')}</th><th>${t('pesoAdulto')} ♀/♂</th><th>${t('animais')}</th><th></th></tr></thead>
           <tbody>${especies.map(e => `<tr>
-            <td class="ico">${e.icono} ${X.calc.icono({ especieId: e.id, sexo: 'M' })}</td><td>${u.esc(e.nome)}</td><td>${e.ciclo} d</td><td>${e.xestacion} d</td>
+            <td class="ico">${e.icono} ${X.calc.icono({ especieId: e.id, sexo: 'M' })}</td><td>${u.esc(e.nome)}</td>
+            <td title="${u.esc(t('dib' + X.razas.codigoEspecie(e)))}"><span class="crotal">${X.razas.codigoEspecie(e)}</span></td><td>${e.ciclo} d</td><td>${e.xestacion} d</td>
             <td>${u.numero(e.pesoAdultoF, 0)} / ${u.numero(e.pesoAdultoM, 0)} kg</td><td>${usos(e.id)}</td>
             <td><button class="btn-icono peq" data-accion="editar-especie" data-id="${e.id}" aria-label="${t('editar')}">${ui.ic('edit')}</button></td></tr>`).join('')}</tbody>
         </table></div>
@@ -67,8 +68,9 @@ X.vConfig = (() => {
       <form class="tarxeta-config" data-form="razas">
         <h2>${t('razas')}</h2>
         <p class="nota">${t('notaRazas')}</p>
-        <textarea name="razas" rows="10" spellcheck="false" class="mono">${u.esc(Object.entries(D.config().razas || {})
-          .sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k} = ${v}`).join('\n'))}</textarea>
+        <textarea name="razas" rows="10" spellcheck="false" class="mono">${u.esc(X.razas.lista()
+          .map(r => `${r.cod} = ${r.nome}${r.dib ? ` [${r.dib}]` : ''}`).join('\n'))}</textarea>
+        <p class="nota">${X.razas.CODIGOS_ESPECIE.map(k => `<b>${k}</b> ${u.esc(t('dib' + k))}`).join(' · ')}</p>
         <div class="botons">${ui.btnGardar()}</div>
       </form>
 
@@ -121,13 +123,16 @@ X.vConfig = (() => {
     ui.toast(t('gardado'), 'ok');
   };
 
-  // Unha raza por liña: "1122 = Rubia Galega"
+  // Unha raza por liña: "1122 = Rubia Galega [02]" (entre corchetes, o código de especie)
   X.formularios.razas = form => {
     const razas = {}, mal = [];
     String(new FormData(form).get('razas') || '').split('\n').forEach(l => {
       if (!l.trim()) return;
-      const m = /^\s*(\d{4})\s*[=:\-–—]\s*(.+?)\s*$/.exec(l);
-      if (m) razas[m[1]] = m[2]; else mal.push(l.trim());
+      const m = /^\s*(\d{2,6})\s*[=:\-–—]\s*(.+?)\s*(?:\[\s*(0[1-6])\s*\])?\s*$/.exec(l);
+      if (!m) { mal.push(l.trim()); return; }
+      // conserva a especie exacta aprendida se non cambiou o código de especie
+      const ant = X.razas.info(m[1]), dib = m[3] || null;
+      razas[m[1]] = { nome: m[2], dib, especie: ant && ant.dib === dib ? ant.especie || null : null };
     });
     if (mal.length) { ui.toast(t('razasMal', { linea: mal[0] }), 'erro'); return; }
     D.gardarConfig({ razas });
@@ -221,6 +226,7 @@ X.vConfig = (() => {
         ${ui.campo(t('nome') + ' *', ui.entrada('nome', e.nome, 'required'))}
         ${ui.campo(t('iconoFemia'), ui.entrada('icono', e.icono, 'maxlength="4"'), t('axIcono'))}
         ${ui.campo(t('iconoMacho'), ui.entrada('iconoM', e.id ? X.calc.icono({ especieId: e.id, sexo: 'M' }) : e.iconoM, 'maxlength="4"'), t('axIcono'))}
+        ${ui.campo(t('codigoDib'), ui.selector('codigoDib', X.razas.CODIGOS_ESPECIE.map(k => [k, `${k} · ${t('dib' + k)}`]), e.id ? X.razas.codigoEspecie(e) : '06'), t('axCodigoDib'))}
         ${CAMPOS_ESPECIE.map(([k, etq, un, ax]) => ui.campo(`${t(etq)}${un ? ` (${un})` : ''}`, ui.numero(k, e[k], 'required'), ax ? t(ax) : '')).join('')}
       </div></div>
       ${ui.pe(`${!novo ? `<button type="button" class="btn perigo-texto" data-accion="borrar-especie" data-id="${e.id}" ${usos ? `disabled title="${t('especieEnUso')}"` : ''}>${ui.ic('trash')}<span>${t('eliminar')}</span></button>` : ''}
@@ -233,7 +239,7 @@ X.vConfig = (() => {
   X.formularios.especie = form => {
     const f = new FormData(form), id = form.dataset.id || u.uid(), prev = D.obter('especies', id) || {};
     const icono = (f.get('icono') || '').trim() || '🐾';
-    const e = { ...prev, id, nome: (f.get('nome') || '').trim(), icono, iconoM: (f.get('iconoM') || '').trim() || icono };
+    const e = { ...prev, id, nome: (f.get('nome') || '').trim(), icono, iconoM: (f.get('iconoM') || '').trim() || icono, codigoDib: f.get('codigoDib') || '06' };
     CAMPOS_ESPECIE.forEach(([k]) => { e[k] = u.num(f.get(k)) ?? prev[k]; });
     D.gardar('especies', e);
     ui.modal.pechar();

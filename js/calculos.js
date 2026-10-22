@@ -54,7 +54,7 @@ X.calc = (() => {
     const pot = potencial(w, pesoAdulto(a, e), e);
     const comida = +a.comidaDia || 0;
     const ganancia = comida > 0 ? Math.min(pot, (comida - mant) / e.conversion) : pot;
-    return { peso: w, mant, optima: mant + pot * e.conversion, ganancia };
+    return { peso: w, mant, optima: mant + pot * e.conversion, ganancia, adulto: w >= pesoAdulto(a, e) * 0.99 };
   }
 
   // Comida/día recomendada para un animal novo: a que lle permite medrar ao ritmo
@@ -116,8 +116,13 @@ X.calc = (() => {
   const checkpoint = p => ({ ...p, stock: stock(p), stockData: u.hoxe() });
 
   // ---- Almacén ----
+  // Tipos de lote: 'alpaca' (cadrada) e 'rolo' contan unidades; 'silo' conta kg.
+  // Os lotes antigos tiñan o tipo en texto libre ("Alpaca", "Bóla de silo", "Rolo"…)
+  const tipoLote = l => ['alpaca', 'rolo', 'silo'].includes(l.tipo) ? l.tipo
+    : /rol|bóla|bola|silo/i.test(l.tipo || '') ? 'rolo' : 'alpaca';
+  const totalLote = l => tipoLote(l) === 'silo' ? (+l.kg || 0) : (+l.unidades || 0);
   const gastadas = l => (l.consumos || []).reduce((s, c) => s + (+c.n || 0), 0);
-  const restantes = l => Math.max(0, (+l.unidades || 0) - gastadas(l));
+  const restantes = l => Math.max(0, totalLote(l) - gastadas(l));
 
   // ---- Avisos ----
   let cache = { k: null, r: [] };
@@ -161,7 +166,8 @@ X.calc = (() => {
       }
     }
 
-    const lotes = X.datos.lista('lotes');
+    // O mínimo do almacén cóntase en unidades (alpacas e rolos); o silo vai en kg
+    const lotes = X.datos.lista('lotes').filter(l => tipoLote(l) !== 'silo');
     if (lotes.length) {
       const tot = lotes.reduce((s, l) => s + restantes(l), 0);
       if (tot < cfg.almacenMin) r.push({ nivel: tot === 0 ? 'alto' : 'medio', ref: { tipo: 'almacen' }, orde: tot, texto: t('avAlmacen', { n: tot }), detalle: t('minimo', { n: cfg.almacenMin }) });
@@ -175,6 +181,6 @@ X.calc = (() => {
   return {
     especie, icono, estado, activo, peso, necesidades, comidaProposta, repro,
     animaisParcela, consumo, balance, capacidade, stock, prevision, checkpoint,
-    gastadas, restantes, avisos,
+    tipoLote, totalLote, gastadas, restantes, avisos,
   };
 })();

@@ -1,15 +1,19 @@
 'use strict';
 
-// Lector do DIB (Documento de Identificación Bovina).
+// Lector do DIB (documento de identificación do animal).
 // O código de barras de abaixo do todo leva: ID/DDMMAAAA SS RRRR
-//   ID = ES + 12 cifras · data de nacemento · SS = 01 macho, 02 femia · RRRR = código de raza
+//   ID = ES + 12 cifras (ou UELN de 15 caracteres nos equinos) · data de nacemento
+//   SS = 01 macho, 02 femia · RRRR = código de raza
+// A especie non vai no código: dedúcese da raza (cada raza ten o seu código de especie 01–06).
 // Usa o lector do propio navegador (Chrome en Android) e, se non o hai, a librería ZXing.
 X.dib = (() => {
   const ui = X.ui, D = X.datos;
   const t = (...a) => X.t(...a);
   const ZXING = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
-  const RE_ID = /^[A-Z]{2}\d{12}$/;
-  const RE_DIB = /^([A-Z]{2}\d{12})\/(\d{2})(\d{2})(\d{4})(\d{2})(\d{4})$/;
+  const ID = '[A-Z]{2}\\d{12}|\\d{3}[A-Z0-9]{12}';
+  const RE_ID = new RegExp(`^(?:${ID})$`);
+  const RE_DIB = new RegExp(`^(${ID})\\/(\\d{2})(\\d{2})(\\d{4})(\\d{2})(\\d{2,6})$`);
+  const CLAVE_ULTIMA = 'xunguir.especieDib'; // última especie usada ao escanear unha raza descoñecida
 
   const normalizar = s => String(s || '').toUpperCase().replace(/\s+/g, '');
 
@@ -165,14 +169,22 @@ X.dib = (() => {
   }
 
   // Se o animal xa existe abre a súa ficha (completando datos baleiros); se non, o alta
+  // Especie: a da raza lida; se a raza non se coñece, a última usada; se non, vacún
+  function especieDe(r) {
+    const porRaza = r.razaCodigo && X.razas.especieDaRaza(r.razaCodigo);
+    if (porRaza) return { id: porRaza.id, segura: true };
+    const ultima = localStorage.getItem(CLAVE_ULTIMA);
+    const id = D.obter('especies', ultima) ? ultima : D.obter('especies', 'vacun') ? 'vacun' : (D.lista('especies')[0] || {}).id;
+    return { id, segura: false };
+  }
+
   function procesar(r) {
-    const razas = D.config().razas || {};
     const existe = D.lista('animais').find(a => normalizar(a.crotal) === r.id);
     if (existe) {
       const cambios = {};
       if (r.nacemento && !existe.nacemento) cambios.nacemento = r.nacemento;
       if (r.razaCodigo && !existe.razaCodigo) cambios.razaCodigo = r.razaCodigo;
-      if (r.razaCodigo && !existe.raza && razas[r.razaCodigo]) cambios.raza = razas[r.razaCodigo];
+      if (r.razaCodigo && !existe.raza && X.razas.nome(r.razaCodigo)) cambios.raza = X.razas.nome(r.razaCodigo);
       if (Object.keys(cambios).length) {
         D.gardarAnimal({ ...existe, ...cambios });
         ui.toast(t('datosCompletados', { nome: existe.nome }), 'ok');
@@ -180,13 +192,17 @@ X.dib = (() => {
       X.vAnimais.verFicha(existe.id);
       return;
     }
-    const especieId = D.obter('especies', 'vacun') ? 'vacun' : (D.lista('especies')[0] || {}).id;
+    const esp = especieDe(r);
     X.vAnimais.abrirFormulario(null, {
-      crotal: r.id, especieId, sexo: r.sexo || 'F', nacemento: r.nacemento || null,
-      razaCodigo: r.razaCodigo || null, raza: (r.razaCodigo && razas[r.razaCodigo]) || null,
+      crotal: r.id, especieId: esp.id, sexo: r.sexo || 'F', nacemento: r.nacemento || null,
+      razaCodigo: r.razaCodigo || null, raza: (r.razaCodigo && X.razas.nome(r.razaCodigo)) || null,
     });
     if (!r.completo) ui.toast(t('soNumero'), 'aviso');
+    else if (!esp.segura) ui.toast(t('comprobaEspecie'), 'aviso');
   }
+
+  // Ao gardar un animal que veu dun DIB, lembra a especie para a próxima raza descoñecida
+  const lembrarEspecie = id => localStorage.setItem(CLAVE_ULTIMA, id);
 
   // ---------- Manexadores ----------
   X.accions['escanear-dib'] = () => abrir();
@@ -219,5 +235,5 @@ X.dib = (() => {
     } catch (e) { estado(e.message, true); }
   };
 
-  return { abrir, interpretar, normalizar };
+  return { abrir, interpretar, normalizar, lembrarEspecie };
 })();
