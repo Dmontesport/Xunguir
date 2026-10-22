@@ -64,6 +64,14 @@ X.vConfig = (() => {
         <p class="nota">${t('notaEspecies')}</p>
       </section>
 
+      <form class="tarxeta-config" data-form="razas">
+        <h2>${t('razas')}</h2>
+        <p class="nota">${t('notaRazas')}</p>
+        <textarea name="razas" rows="10" spellcheck="false" class="mono">${u.esc(Object.entries(D.config().razas || {})
+          .sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k} = ${v}`).join('\n'))}</textarea>
+        <div class="botons">${ui.btnGardar()}</div>
+      </form>
+
       <form class="tarxeta-config" data-form="github">
         <h2>${t('syncTitulo')}</h2>
         ${estadoSync()}
@@ -110,6 +118,19 @@ X.vConfig = (() => {
   X.formularios.avisos = form => {
     const f = new FormData(form), n = k => Math.max(0, Math.round(u.num(f.get(k)) || 0));
     D.gardarConfig({ avisos: { celo: n('celo'), parto: n('parto'), comida: n('comida'), colleita: n('colleita'), almacenMin: n('almacenMin'), chea: f.get('chea') === 'on' } });
+    ui.toast(t('gardado'), 'ok');
+  };
+
+  // Unha raza por liña: "1122 = Rubia Galega"
+  X.formularios.razas = form => {
+    const razas = {}, mal = [];
+    String(new FormData(form).get('razas') || '').split('\n').forEach(l => {
+      if (!l.trim()) return;
+      const m = /^\s*(\d{4})\s*[=:\-–—]\s*(.+?)\s*$/.exec(l);
+      if (m) razas[m[1]] = m[2]; else mal.push(l.trim());
+    });
+    if (mal.length) { ui.toast(t('razasMal', { linea: mal[0] }), 'erro'); return; }
+    D.gardarConfig({ razas });
     ui.toast(t('gardado'), 'ok');
   };
 

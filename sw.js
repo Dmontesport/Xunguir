@@ -1,11 +1,11 @@
 'use strict';
 // Service worker: garda os ficheiros da app para que abra sen conexión.
 // Os datos van por outro camiño (localStorage + API de GitHub), non se cachean aquí.
-const CACHE = 'xunguir-v1';
+const CACHE = 'xunguir-v2';
 const FICHEIROS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilos.css',
   'js/i18n.js', 'js/util.js', 'js/datos.js', 'js/calculos.js', 'js/github.js', 'js/fotos.js',
-  'js/ui.js', 'js/vista-animais.js', 'js/vista-parcelas.js', 'js/vista-config.js', 'js/app.js',
+  'js/ui.js', 'js/vista-animais.js', 'js/escaner.js', 'js/vista-parcelas.js', 'js/vista-config.js', 'js/app.js',
   'icons/icono.svg', 'icons/icono-192.png', 'icons/icono-512.png',
 ];
 

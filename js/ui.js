@@ -30,6 +30,7 @@ X.ui = (() => {
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
     back: '<path d="m15 18-6-6 6-6"/>',
     minus: '<path d="M5 12h14"/>',
+    scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10M12 7v10M16 7v10"/>',
   };
   const ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
@@ -58,7 +59,15 @@ X.ui = (() => {
   const modal = {
     vista: null,
     volver: null,
-    abrir(html, { vista = null, volver = null } = {}) {
+    alPechar: null, // p. ex. apagar a cámara ao saír do lector
+    limpar() {
+      const f = this.alPechar;
+      this.alPechar = null;
+      if (f) f();
+    },
+    abrir(html, { vista = null, volver = null, alPechar = null } = {}) {
+      this.limpar();
+      this.alPechar = alPechar;
       const d = $('#modal');
       d.innerHTML = `<div class="modal-caixa">${html}</div>`;
       this.vista = vista;
@@ -74,6 +83,7 @@ X.ui = (() => {
       if (html) this.abrir(html, { vista: fnVista, volver });
     },
     pechar() {
+      this.limpar();
       const d = $('#modal');
       if (d.open) d.close();
       this.vista = null;

@@ -12,7 +12,7 @@ X.vAnimais = (() => {
     const q = filtro.q.trim().toLowerCase();
     return lista.filter(a => (!filtro.especie || a.especieId === filtro.especie)
       && (!filtro.sexo || a.sexo === filtro.sexo)
-      && (!q || (a.nome || '').toLowerCase().includes(q) || (a.crotal || '').toLowerCase().includes(q)));
+      && (!q || [a.nome, a.crotal, a.raza].some(v => (v || '').toLowerCase().includes(q))));
   }
 
   function chipsEstado(a) {
@@ -41,7 +41,7 @@ X.vAnimais = (() => {
       </div>
       <div class="info">
         <div class="nome-fila"><h3>${u.esc(a.nome)}</h3>${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''}</div>
-        <div class="sub">${e.icono} ${u.esc(e.nome)}${idade ? ` · ${idade}` : ''}</div>
+        <div class="sub">${e.icono} ${u.esc(a.raza || e.nome)}${idade ? ` · ${idade}` : ''}</div>
         <div class="datos-mini">
           ${w != null ? `<span title="${t('pesoTeorico')}">⚖️ ${u.kg(w)}</span>` : ''}
           ${a.comidaDia ? `<span title="${t('comidaDia')}">🌾 ${u.kg(a.comidaDia)}</span>` : ''}
@@ -85,6 +85,7 @@ X.vAnimais = (() => {
     main.innerHTML = `${ui.tiraAvisos(av)}
       <div class="ferramentas">
         <label class="busca">${ui.ic('search')}<input type="search" id="buscaAnimais" placeholder="${t('buscarAnimal')}" value="${u.esc(filtro.q)}" data-input="busca-animais"></label>
+        <button class="btn" data-accion="escanear-dib" title="${t('escanearDib')}">${ui.ic('scan')}<span>${t('escanearDib')}</span></button>
         <button class="btn primario" data-accion="novo-animal">${ui.ic('plus')}<span>${t('novoAnimal')}</span></button>
       </div>
       ${todos.length ? `<div class="filtros">${filtros}</div>` : ''}
@@ -111,6 +112,7 @@ X.vAnimais = (() => {
   }
 
   const NOMES_EVENTO = { celo: 'evCelo', cubricion: 'evCubricion', parto: 'evParto' };
+  const RE_CROTAL = /^[A-Z]{2}\d{12}$/; // formato oficial: gárdase sen espazos e en maiúsculas
 
   function ficha(id) {
     const a = D.obter('animais', id);
@@ -176,6 +178,7 @@ X.vAnimais = (() => {
             <div class="sub">${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''} ${e.icono} ${u.esc(e.nome)} · ${a.sexo === 'M' ? '♂ ' + t('macho') : '♀ ' + t('femia')}</div>
             <div class="chips">${chipsEstado(a)}</div>
             <dl class="datos">
+              ${a.raza ? fila(t('raza'), u.esc(a.raza) + (a.razaCodigo ? ` <small>(${u.esc(a.razaCodigo)})</small>` : '')) : ''}
               ${fila(t('nacemento'), a.nacemento ? `${u.data(a.nacemento)} <small>(${u.idade(a.nacemento, a.falecemento || undefined)})</small>` : '—')}
               ${activo ? fila(t('parcela'), p ? `<button class="enlace" data-accion="ver-parcela" data-id="${p.id}">📍 ${u.esc(p.nome)}</button>` : t('senParcela')) : ''}
               ${fila(t('comidaDia'), a.comidaDia ? `${u.kg(a.comidaDia)}` : '—')}
@@ -204,10 +207,21 @@ X.vAnimais = (() => {
   const opcionsParcelas = () => [['', t('senParcela')], ...D.lista('parcelas').filter(p => p.tipo !== 'forraxe').sort(u.porNome).map(p => [p.id, p.nome])];
   const opcionsEspecies = () => D.lista('especies').sort(u.porNome).map(e => [e.id, `${e.icono} ${e.nome}`]);
 
+  // Nomes de raza coñecidos: os da táboa de códigos e os xa usados
+  function nomesRazas() {
+    const r = new Set(Object.values(D.config().razas || {}));
+    D.lista('animais').forEach(a => a.raza && r.add(a.raza));
+    return [...r].sort((x, y) => x.localeCompare(y));
+  }
+
+  // `a` sen id = animal novo (pode traer datos xa cubertos, p. ex. dun DIB)
   function formulario(a) {
-    const novo = !a;
-    a = a || { sexo: 'F', especieId: (D.lista('especies')[0] || {}).id };
+    const novo = !a || !a.id;
+    a = a || {};
+    a = { sexo: 'F', especieId: (D.lista('especies')[0] || {}).id, ...a };
     const v = a.venda || {};
+    const razas = D.config().razas || {};
+    const axudaRaza = a.razaCodigo ? (razas[a.razaCodigo] ? t('codigoRaza', { cod: a.razaCodigo }) : t('razaDesconecida', { cod: a.razaCodigo })) : '';
     return `<form data-form="animal" data-id="${a.id || ''}" data-sexo="${a.sexo}" class="modal-form">
       ${ui.cab(novo ? t('novoAnimal') : t('editarAnimal'), !novo)}
       <div class="modal-corpo">
@@ -222,6 +236,9 @@ X.vAnimais = (() => {
         </div>
         <div class="grella-campos">
           ${ui.campo(t('especie'), ui.selector('especieId', opcionsEspecies(), a.especieId, 'data-cambio="proposta-comida"'))}
+          ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="listaRazas" autocomplete="off"')
+            + `<datalist id="listaRazas">${nomesRazas().map(n => `<option value="${u.esc(n)}">`).join('')}</datalist>`
+            + `<input type="hidden" name="razaCodigo" value="${u.esc(a.razaCodigo || '')}">`, axudaRaza)}
           ${ui.campo(t('sexo'), `<div class="segmentado">
             <label><input type="radio" name="sexo" value="F" ${a.sexo !== 'M' ? 'checked' : ''} data-cambio="sexo"><span>♀ ${t('femia')}</span></label>
             <label><input type="radio" name="sexo" value="M" ${a.sexo === 'M' ? 'checked' : ''} data-cambio="sexo"><span>♂ ${t('macho')}</span></label></div>`)}
@@ -252,8 +269,8 @@ X.vAnimais = (() => {
     </form>`;
   }
 
-  function abrirFormulario(id) {
-    const a = id ? D.obter('animais', id) : null;
+  function abrirFormulario(id, inicial) {
+    const a = id ? D.obter('animais', id) : inicial || null;
     ui.modal.abrir(formulario(a), { volver: id ? () => verFicha(id) : null });
     proporComida(document.querySelector('form[data-form="animal"]'));
   }
@@ -288,9 +305,20 @@ X.vAnimais = (() => {
     const prev = D.obter('animais', id);
     const s = k => (f.get(k) || '').toString().trim() || null;
     const sexo = s('sexo') || 'F';
+    const crotal = s('crotal') && RE_CROTAL.test(X.dib.normalizar(s('crotal'))) ? X.dib.normalizar(s('crotal')) : s('crotal');
+    const dup = crotal && D.lista('animais').find(x => x.id !== id && X.dib.normalizar(x.crotal) === X.dib.normalizar(crotal));
+    if (dup) { ui.toast(t('crotalDuplicado', { id: crotal, nome: dup.nome }), 'erro'); return; }
+
+    // Raza: código pola táboa (busca polo nome) ou o lido do DIB; se o código era descoñecido, apréndeo
+    const razas = D.config().razas || {}, raza = s('raza');
+    const codLido = s('razaCodigo');
+    const codPorNome = raza && Object.keys(razas).find(k => razas[k].toLowerCase() === raza.toLowerCase());
+    const razaCodigo = codPorNome || (codLido && !razas[codLido] ? codLido : null);
+    if (raza && razaCodigo && !razas[razaCodigo]) D.gardarConfig({ razas: { ...razas, [razaCodigo]: raza } });
+
     const a = {
       ...(prev || {}), id,
-      nome: s('nome'), crotal: s('crotal'), especieId: s('especieId'), sexo,
+      nome: s('nome'), crotal, especieId: s('especieId'), sexo, raza, razaCodigo,
       nacemento: s('nacemento'), pesoNacemento: u.num(f.get('pesoNacemento')),
       comidaDia: u.num(f.get('comidaDia')), parcelaId: s('parcelaId'),
       nai: s('nai'), pai: s('pai'), notas: s('notas'),
@@ -473,5 +501,5 @@ X.vAnimais = (() => {
   X.accions['filtro-animais'] = el => { filtro[el.dataset.campo] = el.dataset.valor; X.app.render(); };
   X.entradas['busca-animais'] = el => { filtro.q = el.value; X.app.render(); };
 
-  return { render, verFicha, opcionsAnimais };
+  return { render, verFicha, abrirFormulario, opcionsAnimais };
 })();

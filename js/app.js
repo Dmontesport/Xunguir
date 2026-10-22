@@ -136,7 +136,7 @@ X.app = (() => {
 
     const modal = $('#modal');
     modal.addEventListener('click', e => { if (e.target === modal) ui.modal.pechar(); });
-    modal.addEventListener('close', () => { ui.modal.vista = null; ui.modal.volver = null; });
+    modal.addEventListener('close', () => { ui.modal.limpar(); ui.modal.vista = null; ui.modal.volver = null; });
 
     window.addEventListener('hashchange', navegar);
     window.addEventListener('online', () => X.sync.executar());

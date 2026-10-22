@@ -21,6 +21,17 @@ X.datos = (() => {
   const AVISOS_DEF = { celo: 3, parto: 7, comida: 3, colleita: 7, almacenMin: 5, chea: true };
   // Valores por hectárea para propoñer capacidade e crecemento (kg de materia seca)
   const PARCELAS_DEF = { kgHa: 3000, crecHa: 30 };
+  // Códigos de raza bovina que aparecen no código de barras do DIB
+  const RAZAS_DEF = {
+    '0000': 'Conxunto mestizo / Cruces', '0813': 'Salers',
+    '1103': 'Asturiana de la Montaña (Casina)', '1105': 'Bruna dos Pirineos', '1108': 'Monchina',
+    '1111': 'Frisona (Holstein)', '1112': 'Parda Alpina / Parda', '1113': 'Charolesa (Charolais)', '1114': 'Hereford',
+    '1115': 'Jersey', '1116': 'Angus (Aberdeen Angus)', '1117': 'Limusina (Limousin)', '1118': 'Roja Danesa',
+    '1119': 'Santa Gertrudis', '1120': 'Retinta', '1121': 'Avileña - Negra Ibérica', '1122': 'Rubia Galega',
+    '1123': 'Morucha', '1125': 'Asturiana de los Valles', '1126': 'Pirenaica', '1127': 'Sayaguesa',
+    '1128': 'Alistana - Sanabresa', '1130': 'Lidia (Toro de Lidia)', '1131': 'Tudanca', '1132': 'Cachena',
+    '1133': 'Caldelá', '1134': 'Frieiresa', '1135': 'Limiá', '1136': 'Vianesa', '9902': 'Brahman', '9903': 'Cebú',
+  };
 
   let estado = null;
   let rev = 0;      // cambia con calquera modificación (para cachés)
@@ -39,6 +50,7 @@ X.datos = (() => {
     e.config = e.config || { upd: 0 };
     e.config.avisos = { ...AVISOS_DEF, ...(e.config.avisos || {}) };
     e.config.parcelas = { ...PARCELAS_DEF, ...(e.config.parcelas || {}) };
+    if (!e.config.razas) e.config.razas = { ...RAZAS_DEF };
     return e;
   }
 

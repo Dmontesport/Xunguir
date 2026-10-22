@@ -58,6 +58,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -378,6 +379,24 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
 .confirmar-caixa p { margin: 0 0 6px; white-space: pre-line; }
 .confirmar-caixa .botons { justify-content: flex-end; }
 .btn.perigo { background: var(--vermello); border-color: var(--vermello); color: #fff; }
+
+/* ---------- Lector DIB ---------- */
+.escaner { position: relative; aspect-ratio: 4 / 3; background: #000; border-radius: var(--raio); overflow: hidden; }
+.escaner video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.escaner .marco {
+  position: absolute; left: 6%; right: 6%; top: 32%; height: 36%;
+  border: 3px solid rgba(255, 255, 255, .9); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .35);
+}
+.escaner-estado {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 12px; text-align: center;
+  background: rgba(0, 0, 0, .6); color: #fff; font-size: .88rem; font-weight: 600;
+}
+.escaner-estado.erro { background: rgba(160, 40, 25, .85); }
+.dib-parcial { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: 10px; background: var(--ambar-suave); color: var(--ambar); font-weight: 600; margin: 8px 0; }
+.dib-manual { display: flex; gap: 8px; margin-top: 14px; }
+.dib-manual input { flex: 1; font-family: ui-monospace, Consolas, monospace; }
+textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: .88rem; }
 
 /* ---------- Ficha ---------- */
 .ficha-top { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-bottom: 8px; }
