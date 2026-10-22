@@ -219,6 +219,20 @@ X.vAnimais = (() => {
     return [['', '—'], ...D.lista('animais').filter(x => x.id !== excluir && filtroFn(x)).sort(u.porNome)
       .map(x => [x.id, `${x.nome}${x.crotal ? ' · ' + x.crotal : ''}`])];
   }
+  // Posibles pais: mesma especie e sexo indicado
+  const opcionsPais = (sexo, especieId, excluir) => opcionsAnimais(x => x.sexo === sexo && x.especieId === especieId, excluir);
+
+  // Ao cambiar a especie no formulario, as listas de nai, pai e macho só ofrecen animais desa especie
+  function actualizarPais(form) {
+    const especieId = form.elements.especieId.value;
+    for (const [campo, sexo] of [['nai', 'F'], ['pai', 'M'], ['cubricionMacho', 'M']]) {
+      const sel = form.elements[campo];
+      if (!sel) continue;
+      const actual = sel.value, ops = opcionsPais(sexo, especieId, form.dataset.id);
+      sel.innerHTML = ops.map(([v, l]) => `<option value="${u.esc(v)}">${u.esc(l)}</option>`).join('');
+      sel.value = ops.some(([v]) => v === actual) ? actual : '';
+    }
+  }
   const opcionsParcelas = () => [['', t('senParcela')], ...D.lista('parcelas').filter(p => p.tipo !== 'forraxe').sort(u.porNome).map(p => [p.id, p.nome])];
   const opcionsEspecies = () => D.lista('especies').sort(u.porNome).map(e => [e.id, `${e.icono} ${e.nome}`]);
 
@@ -250,7 +264,7 @@ X.vAnimais = (() => {
           </div>
         </div>
         <div class="grella-campos">
-          ${ui.campo(t('especie'), ui.selector('especieId', opcionsEspecies(), a.especieId, 'data-cambio="proposta-comida"'))}
+          ${ui.campo(t('especie'), ui.selector('especieId', opcionsEspecies(), a.especieId, 'data-cambio="especie-animal"'))}
           ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="listaRazas" autocomplete="off"')
             + `<datalist id="listaRazas">${nomesRazas().map(n => `<option value="${u.esc(n)}">`).join('')}</datalist>`
             + `<input type="hidden" name="razaCodigo" value="${u.esc(a.razaCodigo || '')}">`, axudaRaza)}
@@ -264,14 +278,14 @@ X.vAnimais = (() => {
           ${ui.campo(t('parcela'), ui.selector('parcelaId', opcionsParcelas(), a.parcelaId))}
           ${D.lista('grupos').length ? ui.campo(t('grupos'), `<div class="chips-check">${D.lista('grupos').sort(u.porNome).map(g =>
             `<label><input type="checkbox" name="grupos" value="${g.id}" ${X.vGrupos.estaEn(a, g.id) ? 'checked' : ''}><span>👥 ${u.esc(g.nome)}</span></label>`).join('')}</div>`) : ''}
-          ${ui.campo(t('nai'), ui.selector('nai', opcionsAnimais(x => x.sexo === 'F', a.id), a.nai))}
-          ${ui.campo(t('pai'), ui.selector('pai', opcionsAnimais(x => x.sexo === 'M', a.id), a.pai))}
+          ${ui.campo(t('nai'), ui.selector('nai', opcionsPais('F', a.especieId, a.id), a.nai))}
+          ${ui.campo(t('pai'), ui.selector('pai', opcionsPais('M', a.especieId, a.id), a.pai))}
         </div>
         <fieldset class="so-femia"><legend>${t('reproducion')}</legend><div class="grella-campos">
           ${ui.campo(t('ultimoCelo'), ui.dataInp('ultimoCelo', a.ultimoCelo))}
           ${ui.campo(t('ultimoParto'), ui.dataInp('ultimoParto', a.ultimoParto))}
           ${ui.campo(t('cubricion'), ui.dataInp('cubricion', a.cubricion), t('axudaCubricion'))}
-          ${ui.campo(t('machoCubricion'), ui.selector('cubricionMacho', opcionsAnimais(x => x.sexo === 'M', a.id), a.cubricionMacho))}
+          ${ui.campo(t('machoCubricion'), ui.selector('cubricionMacho', opcionsPais('M', a.especieId, a.id), a.cubricionMacho))}
         </div></fieldset>
         ${novo ? '' : `<fieldset><legend>${t('estado')}</legend><div class="grella-campos">
           ${ui.campo(t('dataFalecemento'), ui.dataInp('falecemento', a.falecemento))}
@@ -309,6 +323,7 @@ X.vAnimais = (() => {
     if (!inp.dataset.manual) inp.value = p.mama ? '' : p.kg;
   }
   X.cambios['proposta-comida'] = el => proporComida(el.form);
+  X.cambios['especie-animal'] = el => { proporComida(el.form); actualizarPais(el.form); };
 
   // Engade ao historial os eventos reprodutivos que cambiaron
   function eventos(prev, a) {
@@ -478,7 +493,7 @@ X.vAnimais = (() => {
         <div class="grella-campos">
           ${ui.campo(t('dataParto'), ui.dataInp('data', u.hoxe(), 'required'))}
           ${ui.campo(t('numeroCrias'), ui.numero('n', 1, 'min="1" max="20" step="1" data-cambio="n-crias"'))}
-          ${ui.campo(t('pai'), ui.selector('pai', opcionsAnimais(x => x.sexo === 'M', a.id), a.cubricionMacho))}
+          ${ui.campo(t('pai'), ui.selector('pai', opcionsPais('M', a.especieId, a.id), a.cubricionMacho))}
         </div>
         <h4>${t('crias')}</h4>
         <div class="filas-crias" data-especie="${a.especieId}">${filasCrias(1, e)}</div>
