@@ -1,0 +1,165 @@
+'use strict';
+
+// Arranque, cabeceira, navegación e delegación de eventos
+X.app = (() => {
+  const u = X.u, ui = X.ui;
+  const t = (...a) => X.t(...a);
+  const $ = s => document.querySelector(s);
+  const VISTAS = { animais: () => X.vAnimais, parcelas: () => X.vParcelas, config: () => X.vConfig };
+  let vista = 'animais', listo = false;
+
+  function cabeceira() {
+    const av = X.calc.avisos().filter(a => a.nivel !== 'info');
+    const nAn = av.filter(a => a.ref.tipo === 'animal').length, nPa = av.length - nAn;
+    const ins = n => n ? `<span class="insignia">${n}</span>` : '';
+    $('#barra').innerHTML = `
+      <a class="marca" href="#animais">${ui.logo()}<span>Xunguir</span></a>
+      <nav class="pestanas">
+        <a href="#animais" class="${vista === 'animais' ? 'activa' : ''}">${t('animais')}${ins(nAn)}</a>
+        <a href="#parcelas" class="${vista === 'parcelas' ? 'activa' : ''}">${t('parcelas')}${ins(nPa)}</a>
+      </nav>
+      <div class="accions">
+        <button class="btn-icono" id="btnSync" data-accion="sync"></button>
+        <button class="btn-icono" id="btnAvisos" data-accion="avisos" aria-label="${t('avisos')}" title="${t('avisos')}">${ui.ic('bell')}${ins(av.length)}</button>
+        <a class="btn-icono ${vista === 'config' ? 'activa' : ''}" href="#config" aria-label="${t('configuracion')}" title="${t('configuracion')}">${ui.ic('sliders')}</a>
+      </div>`;
+    renderSync();
+  }
+
+  function renderSync() {
+    const b = $('#btnSync');
+    if (!b) return;
+    const s = X.sync.st;
+    const hora = s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+    const m = {
+      local: ['cloudOff', t('syncLocal')], pendente: ['cloud', t('syncPendente')], sincronizando: ['refresh', t('syncEnCurso')],
+      ok: ['cloudOk', t('syncOk', { h: hora })], erro: ['alert', t('syncErro', { msg: s.msg })],
+    }[s.estado] || ['cloud', ''];
+    b.className = `btn-icono sync-${s.estado}`;
+    b.innerHTML = ui.ic(m[0]);
+    b.title = m[1];
+    b.setAttribute('aria-label', m[1]);
+  }
+
+  function panelAvisos() {
+    const p = $('#panelAvisos'), av = X.calc.avisos();
+    p.innerHTML = `<div class="panel-cab"><h3>${t('avisos')}</h3><a href="#config" class="enlace" data-accion="pechar-panel">${t('configurar')}</a></div>
+      ${av.length ? `<div class="panel-lista">${av.map(ui.botonAviso).join('')}</div>` : `<p class="todo-ben">${ui.ic('check')} ${t('todoEnOrde')}</p>`}`;
+  }
+
+  function render() {
+    if (!listo) return;
+    // Conservar o foco (p. ex. no buscador) entre renderizados
+    const act = document.activeElement, idFoco = act && act.id && $('#vista').contains(act) ? act.id : null;
+    const sel = idFoco && act.selectionStart != null ? [act.selectionStart, act.selectionEnd] : null;
+    cabeceira();
+    const v = (VISTAS[vista] || VISTAS.animais)();
+    v.render($('#vista'));
+    X.fotos.hidratar($('#vista'));
+    X.fotos.hidratar($('#barra'));
+    ui.modal.refrescar();
+    if (!$('#panelAvisos').hidden) panelAvisos();
+    if (idFoco) {
+      const el = document.getElementById(idFoco);
+      if (el) { el.focus(); if (sel) try { el.setSelectionRange(sel[0], sel[1]); } catch { /* tipo sen selección */ } }
+    }
+  }
+
+  function navegar() {
+    const h = location.hash.slice(1);
+    const nova = VISTAS[h] ? h : 'animais';
+    if (nova !== vista) window.scrollTo(0, 0);
+    vista = nova;
+    $('#panelAvisos').hidden = true;
+    render();
+  }
+
+  // ---- Accións xerais ----
+  X.accions.pechar = () => ui.modal.pechar();
+  X.accions.volver = () => { const v = ui.modal.volver; if (v) v(); else ui.modal.pechar(); };
+  X.accions.avisos = () => {
+    const p = $('#panelAvisos');
+    p.hidden = !p.hidden;
+    if (!p.hidden) panelAvisos();
+  };
+  X.accions['pechar-panel'] = el => { $('#panelAvisos').hidden = true; location.hash = el.getAttribute('href'); };
+  X.accions.sync = () => {
+    if (!X.gh.activo()) { location.hash = '#config'; return; }
+    X.sync.executar();
+  };
+  X.accions['ir-aviso'] = el => {
+    $('#panelAvisos').hidden = true;
+    const { tipo, id } = el.dataset;
+    if (tipo === 'animal') X.vAnimais.verFicha(id);
+    else if (tipo === 'parcela') X.vParcelas.verFicha(id);
+    else if (tipo === 'almacen') {
+      ui.modal.pechar();
+      if (vista !== 'parcelas') location.hash = '#parcelas';
+      setTimeout(() => { const s = $('#almacen'); if (s) s.scrollIntoView({ behavior: 'smooth' }); }, 50);
+    }
+  };
+
+  function eventos() {
+    document.addEventListener('click', e => {
+      const panel = $('#panelAvisos');
+      if (!panel.hidden && !e.target.closest('#panelAvisos, #btnAvisos')) panel.hidden = true;
+      const el = e.target.closest('[data-accion]');
+      if (!el || el.disabled) return;
+      const fn = X.accions[el.dataset.accion];
+      if (!fn) return;
+      e.preventDefault();
+      fn(el, e);
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.matches('article[data-accion]')) e.target.click();
+    });
+    document.addEventListener('submit', async e => {
+      const f = e.target.closest('form[data-form]');
+      if (!f) return;
+      e.preventDefault();
+      const fn = X.formularios[f.dataset.form];
+      if (!fn) return;
+      const b = f.querySelector('[type=submit]');
+      if (b) b.disabled = true;
+      try { await fn(f, e); }
+      catch (err) { console.error(err); ui.toast(err.message, 'erro'); }
+      finally { if (b) b.disabled = false; }
+    });
+    document.addEventListener('change', e => {
+      const el = e.target.closest('[data-cambio]');
+      if (el && X.cambios[el.dataset.cambio]) X.cambios[el.dataset.cambio](el, e);
+    });
+    document.addEventListener('input', e => {
+      const el = e.target.closest('[data-input]');
+      if (el && X.entradas[el.dataset.input]) X.entradas[el.dataset.input](el, e);
+    });
+
+    const modal = $('#modal');
+    modal.addEventListener('click', e => { if (e.target === modal) ui.modal.pechar(); });
+    modal.addEventListener('close', () => { ui.modal.vista = null; ui.modal.volver = null; });
+
+    window.addEventListener('hashchange', navegar);
+    window.addEventListener('online', () => X.sync.executar());
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') { render(); X.sync.executar(); }
+    });
+    setInterval(() => { if (document.visibilityState === 'visible') X.sync.executar(); }, 120000);
+  }
+
+  function iniciar() {
+    X.lang = localStorage.getItem('xunguir.lingua') || 'gl';
+    document.documentElement.lang = X.lang;
+    X.datos.cargar();
+    listo = true;
+    eventos();
+    navegar();
+    if (X.gh.activo()) X.sync.executar(); else X.sync.programar();
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* sen modo sen conexión */ });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', iniciar);
+
+  return { render, renderSync };
+})();
