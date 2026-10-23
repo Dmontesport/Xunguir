@@ -484,6 +484,16 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .destino.novo .ic { width: 16px; height: 16px; }
 
 /* ---------- Lector DIB ---------- */
+.modos-lector { margin-bottom: 12px; }
+.baston {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;
+  padding: 22px 16px; border-radius: var(--raio); background: var(--superficie); border: 2px dashed var(--borde);
+}
+.baston:focus-within { border-color: var(--primario); }
+.baston-icona { font-size: 2.6rem; animation: latexo 1.6s ease-in-out infinite; }
+.baston p { margin: 0; }
+.baston-entrada { max-width: 320px; text-align: center; font-family: ui-monospace, Consolas, monospace; font-size: 1.1rem; }
+@keyframes latexo { 50% { transform: scale(1.12); opacity: .7; } }
 .escaner { position: relative; aspect-ratio: 4 / 3; background: #000; border-radius: var(--raio); overflow: hidden; }
 .escaner video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .escaner .marco {

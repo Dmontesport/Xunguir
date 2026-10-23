@@ -1,11 +1,13 @@
 'use strict';
 
-// Lector do DIB (documento de identificación do animal).
-// O código de barras de abaixo do todo leva: ID/DDMMAAAA SS RRRR
-//   ID = ES + 12 cifras (ou UELN de 15 caracteres nos equinos) · data de nacemento
-//   SS = 01 macho, 02 femia · RRRR = código de raza
-// A especie non vai no código: dedúcese da raza (cada raza ten o seu código de especie 01–06).
-// Usa o lector do propio navegador (Chrome en Android) e, se non o hai, a librería ZXing.
+// Lector de identificación do animal, con dous modos:
+//  · Cámara: código de barras do DIB. O de abaixo do todo leva: ID/DDMMAAAA SS RRRR
+//      ID = ES + 12 cifras (ou UELN de 15 caracteres nos equinos) · data de nacemento
+//      SS = 01 macho, 02 femia · RRRR = código de raza
+//  · Bastón: lector de crotais electrónicos emparellado por Bluetooth en modo teclado.
+//      Escribe o número electrónico 724 + 12 cifras (724 = España), que equivale a ES + 12 cifras.
+// A especie non vai no DIB: dedúcese da raza; no chip, "22"/"27" ao comezo indica bovino.
+// A raza proponse coa última que se lle puxo a un animal lido desa especie.
 X.dib = (() => {
   const ui = X.ui, D = X.datos;
   const t = (...a) => X.t(...a);
@@ -13,9 +15,12 @@ X.dib = (() => {
   const ID = '[A-Z]{2}\\d{12}|\\d{3}[A-Z0-9]{12}';
   const RE_ID = new RegExp(`^(?:${ID})$`);
   const RE_DIB = new RegExp(`^(${ID})\\/(\\d{2})(\\d{2})(\\d{4})(\\d{2})(\\d{2,6})$`);
-  const CLAVE_ULTIMA = 'xunguir.especieDib'; // última especie usada ao escanear unha raza descoñecida
+  const CLAVE_ULTIMA = 'xunguir.especieDib';   // última especie dun animal lido
+  const CLAVE_RAZAS = 'xunguir.ultimasRazas';  // { especieId: última raza posta a un animal lido }
+  const CLAVE_MODO = 'xunguir.modoLector';     // 'camara' ou 'baston'
 
   const normalizar = s => String(s || '').toUpperCase().replace(/\s+/g, '');
+  const existePorCrotal = id => D.lista('animais').find(a => normalizar(a.crotal) === id);
 
   function interpretar(texto) {
     const s = normalizar(texto);
@@ -26,7 +31,15 @@ X.dib = (() => {
       const valida = +mm >= 1 && +mm <= 12 && +dd >= 1 && +dd <= 31 && !isNaN(Date.parse(data));
       return { id, nacemento: valida ? data : null, sexo: sx === '01' ? 'M' : sx === '02' ? 'F' : null, razaCodigo: raza, completo: true };
     }
-    if (RE_ID.test(s)) return { id: s, completo: false };
+    // Número electrónico de España (724 + 12 cifras), tal cal o escribe o bastón (pode levar espazos ou guións)
+    const dix = s.replace(/[^0-9A-Z]/g, '');
+    const e = /^724(\d{12})$/.exec(dix) || (/^\d+$/.test(dix) && /724(\d{12})$/.exec(dix));
+    if (e) {
+      // Se xa hai un animal gardado co número de 15 cifras (p. ex. un cabalo), respéctase
+      const id = existePorCrotal(`724${e[1]}`) ? `724${e[1]}` : `ES${e[1]}`;
+      return { id, completo: false, electronico: true, bovino: /^2[27]/.test(e[1]) };
+    }
+    if (RE_ID.test(dix)) return { id: dix, completo: false };
     return null;
   }
 
@@ -36,7 +49,7 @@ X.dib = (() => {
     return rs.find(r => r.completo) || rs[0] || null;
   }
 
-  // ---------- Descodificador ----------
+  // ---------- Descodificador de códigos de barras ----------
   let detectorP = null;
 
   const cargarZXing = () => window.ZXing ? Promise.resolve() : new Promise((res, rej) => {
@@ -84,9 +97,10 @@ X.dib = (() => {
   }
 
   // ---------- Pantalla do lector ----------
-  let fluxo = null, sesion = 0, parcial = null;
+  let fluxo = null, sesion = 0, parcial = null, temporizadorBaston = null;
 
   const $m = s => document.querySelector(`#modal ${s}`);
+  const modoGardado = () => localStorage.getItem(CLAVE_MODO) === 'baston' ? 'baston' : 'camara';
 
   function estado(msg, erro = false) {
     const el = $m('.escaner-estado');
@@ -97,6 +111,7 @@ X.dib = (() => {
 
   function parar() {
     sesion++;
+    clearTimeout(temporizadorBaston);
     if (fluxo) { fluxo.getTracks().forEach(p => p.stop()); fluxo = null; }
   }
 
@@ -109,25 +124,45 @@ X.dib = (() => {
       <button class="btn peq" data-accion="dib-usar" data-codigo="${r.id}">${t('usarNumero')}</button>`;
   }
 
-  async function abrir() {
+  const corpoCamara = () => `
+    <div class="escaner"><video playsinline muted autoplay></video><div class="marco"></div>
+      <div class="escaner-estado">${t('iniciandoCamara')}</div></div>
+    <p class="nota">${t('axudaEscaner')}</p>
+    <div class="dib-parcial" hidden></div>
+    <div class="botons">
+      <label class="btn">${ui.ic('camera')}<span>${t('lerDesdeFoto')}</span>
+        <input type="file" accept="image/*" capture="environment" data-cambio="dib-foto" hidden></label>
+    </div>`;
+
+  // inputmode="none": o lector escribe aquí coma un teclado, sen que saia o teclado do móbil
+  const corpoBaston = () => `
+    <div class="baston" data-accion="enfocar-baston">
+      <div class="baston-icona">📡</div>
+      <p><b>${t('pasaBaston')}</b></p>
+      <input class="baston-entrada" inputmode="none" autocomplete="off" autocapitalize="characters" spellcheck="false"
+        data-input="baston" placeholder="${t('esperandoLectura')}" aria-label="${t('pasaBaston')}">
+      <p class="nota">${t('axudaBaston')}</p>
+    </div>`;
+
+  async function abrir(modo = modoGardado()) {
     parar();
     parcial = null;
+    localStorage.setItem(CLAVE_MODO, modo);
     const s = sesion;
     ui.modal.abrir(`${ui.cab(t('escanearDib'))}
       <div class="modal-corpo">
-        <div class="escaner"><video playsinline muted autoplay></video><div class="marco"></div>
-          <div class="escaner-estado">${t('iniciandoCamara')}</div></div>
-        <p class="nota">${t('axudaEscaner')}</p>
-        <div class="dib-parcial" hidden></div>
-        <div class="botons">
-          <label class="btn">${ui.ic('camera')}<span>${t('lerDesdeFoto')}</span>
-            <input type="file" accept="image/*" capture="environment" data-cambio="dib-foto" hidden></label>
+        <div class="segmentado modos-lector">
+          <label><input type="radio" name="modoLector" value="camara" ${modo === 'camara' ? 'checked' : ''} data-cambio="modo-lector"><span>📷 ${t('modoCamara')}</span></label>
+          <label><input type="radio" name="modoLector" value="baston" ${modo === 'baston' ? 'checked' : ''} data-cambio="modo-lector"><span>📡 ${t('modoBaston')}</span></label>
         </div>
+        ${modo === 'baston' ? corpoBaston() : corpoCamara()}
         <form data-form="dib-manual" class="dib-manual">
           ${ui.entrada('codigo', '', `placeholder="${t('escribirCodigo')}" autocomplete="off" autocapitalize="characters" spellcheck="false"`)}
           <button class="btn" type="submit">${ui.ic('search')}<span>${t('buscar')}</span></button>
         </form>
       </div>`, { alPechar: parar });
+
+    if (modo === 'baston') { enfocarBaston(); return; }
 
     try {
       const det = await detector();
@@ -168,18 +203,69 @@ X.dib = (() => {
     procesar(r);
   }
 
-  // Se o animal xa existe abre a súa ficha (completando datos baleiros); se non, o alta
-  // Especie: a da raza lida; se a raza non se coñece, a última usada; se non, vacún
+  // ---------- Bastón ----------
+  function enfocarBaston() {
+    const inp = $m('.baston-entrada');
+    if (inp) inp.focus();
+  }
+
+  function lerBaston(inp) {
+    clearTimeout(temporizadorBaston);
+    const valor = inp.value.trim();
+    if (!valor) return;
+    const r = interpretar(valor);
+    inp.value = '';
+    if (!r) { ui.toast(t('codigoNonValido'), 'erro'); return; }
+    atopado(r);
+  }
+
+  // O bastón escribe moi rápido e remata con Intro; se non manda Intro, lese ao parar de escribir
+  X.entradas.baston = el => {
+    clearTimeout(temporizadorBaston);
+    temporizadorBaston = setTimeout(() => lerBaston(el), 400);
+  };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.matches && e.target.matches('.baston-entrada')) { e.preventDefault(); lerBaston(e.target); }
+  });
+  // Se o foco sae do campo do bastón (p. ex. un toque na pantalla), volve a el
+  document.addEventListener('focusout', e => {
+    if (!e.target.matches || !e.target.matches('.baston-entrada')) return;
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || a === document.body || a.closest('.baston')) enfocarBaston();
+    }, 50);
+  });
+  X.accions['enfocar-baston'] = () => enfocarBaston();
+  X.cambios['modo-lector'] = el => abrir(el.value);
+
+  // ---------- Especie e raza propostas ----------
+  const ultimasRazas = () => { try { return JSON.parse(localStorage.getItem(CLAVE_RAZAS)) || {}; } catch { return {}; } };
+  const ultimaRaza = especieId => ultimasRazas()[especieId] || null;
+
+  // Especie: a da raza lida; se o chip di bovino, vacún; se non, a do último animal lido; se non, vacún
   function especieDe(r) {
     const porRaza = r.razaCodigo && X.razas.especieDaRaza(r.razaCodigo);
     if (porRaza) return { id: porRaza.id, segura: true };
+    if (r.bovino) {
+      const bov = D.obter('especies', 'vacun') || D.lista('especies').find(e => X.razas.codigoEspecie(e) === '02');
+      if (bov) return { id: bov.id, segura: true };
+    }
     const ultima = localStorage.getItem(CLAVE_ULTIMA);
     const id = D.obter('especies', ultima) ? ultima : D.obter('especies', 'vacun') ? 'vacun' : (D.lista('especies')[0] || {}).id;
     return { id, segura: false };
   }
 
+  // Ao gardar un animal que veu dunha lectura, lembra a súa especie e a raza desa especie
+  function lembrar(especieId, raza) {
+    if (!especieId) return;
+    localStorage.setItem(CLAVE_ULTIMA, especieId);
+    if (raza) localStorage.setItem(CLAVE_RAZAS, JSON.stringify({ ...ultimasRazas(), [especieId]: raza }));
+  }
+
+  // Se o animal xa existe abre a súa ficha (completando datos baleiros); se non, o alta
   function procesar(r) {
-    const existe = D.lista('animais').find(a => normalizar(a.crotal) === r.id);
+    const lerOutro = { texto: t('lerOutro'), fn: () => abrir() };
+    const existe = existePorCrotal(r.id);
     if (existe) {
       const cambios = {};
       if (r.nacemento && !existe.nacemento) cambios.nacemento = r.nacemento;
@@ -187,22 +273,22 @@ X.dib = (() => {
       if (r.razaCodigo && !existe.raza && X.razas.nome(r.razaCodigo)) cambios.raza = X.razas.nome(r.razaCodigo);
       if (Object.keys(cambios).length) {
         D.gardarAnimal({ ...existe, ...cambios });
-        ui.toast(t('datosCompletados', { nome: existe.nome }), 'ok');
-      } else ui.toast(t('animalAtopado', { nome: existe.nome }), 'ok');
+        ui.toast(t('datosCompletados', { nome: existe.nome }), 'ok', lerOutro);
+      } else ui.toast(t('animalAtopado', { nome: existe.nome }), 'ok', lerOutro);
       X.vAnimais.verFicha(existe.id);
       return;
     }
     const esp = especieDe(r);
+    // Raza: a que trae o DIB; se non trae, a última que se lle puxo a esta especie
+    const razaLida = r.razaCodigo ? X.razas.nome(r.razaCodigo) : null;
+    const proposta = !r.razaCodigo ? ultimaRaza(esp.id) : null;
     X.vAnimais.abrirFormulario(null, {
       crotal: r.id, especieId: esp.id, sexo: r.sexo || 'F', nacemento: r.nacemento || null,
-      razaCodigo: r.razaCodigo || null, raza: (r.razaCodigo && X.razas.nome(r.razaCodigo)) || null,
+      razaCodigo: r.razaCodigo || null, raza: razaLida || proposta, razaProposta: !!proposta, deLectura: true,
     });
-    if (!r.completo) ui.toast(t('soNumero'), 'aviso');
-    else if (!esp.segura) ui.toast(t('comprobaEspecie'), 'aviso');
+    if (!esp.segura) ui.toast(t('comprobaEspecie'), 'aviso');
+    else if (!r.completo && !r.electronico) ui.toast(t('soNumero'), 'aviso');
   }
-
-  // Ao gardar un animal que veu dun DIB, lembra a especie para a próxima raza descoñecida
-  const lembrarEspecie = id => localStorage.setItem(CLAVE_ULTIMA, id);
 
   // ---------- Manexadores ----------
   X.accions['escanear-dib'] = () => abrir();
@@ -235,5 +321,5 @@ X.dib = (() => {
     } catch (e) { estado(e.message, true); }
   };
 
-  return { abrir, interpretar, normalizar, lembrarEspecie };
+  return { abrir, interpretar, normalizar, lembrar, ultimaRaza };
 })();

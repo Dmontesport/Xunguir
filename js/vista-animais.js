@@ -260,7 +260,8 @@ X.vAnimais = (() => {
     a = a || {};
     a = { sexo: 'F', especieId: (D.lista('especies')[0] || {}).id, ...a };
     const v = a.venda || {};
-    const axudaRaza = a.razaCodigo ? (X.razas.info(a.razaCodigo) ? t('codigoRaza', { cod: a.razaCodigo }) : t('razaDesconecida', { cod: a.razaCodigo })) : '';
+    const axudaRaza = a.razaCodigo ? (X.razas.info(a.razaCodigo) ? t('codigoRaza', { cod: a.razaCodigo }) : t('razaDesconecida', { cod: a.razaCodigo }))
+      : a.razaProposta ? t('razaUltima') : '';
     return `<form data-form="animal" data-id="${a.id || ''}" data-sexo="${a.sexo}" class="modal-form">
       ${ui.cab(novo ? t('novoAnimal') : t('editarAnimal'), !novo)}
       <div class="modal-corpo">
@@ -275,9 +276,10 @@ X.vAnimais = (() => {
         </div>
         <div class="grella-campos">
           ${ui.campo(t('especie'), ui.selector('especieId', opcionsEspecies(), a.especieId, 'data-cambio="especie-animal"'))}
-          ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="listaRazas" autocomplete="off"')
+          ${ui.campo(t('raza'), ui.entrada('raza', a.raza, `list="listaRazas" autocomplete="off" data-input="raza-manual" ${a.razaProposta ? 'data-proposta-raza="1"' : ''}`)
             + `<datalist id="listaRazas">${opcionsRazas(a.especieId)}</datalist>`
-            + `<input type="hidden" name="razaCodigo" value="${u.esc(a.razaCodigo || '')}">`, axudaRaza)}
+            + `<input type="hidden" name="razaCodigo" value="${u.esc(a.razaCodigo || '')}">`
+            + (a.deLectura ? '<input type="hidden" name="deLectura" value="1">' : ''), axudaRaza)}
           ${ui.campo(t('sexo'), `<div class="segmentado">
             <label><input type="radio" name="sexo" value="F" ${a.sexo !== 'M' ? 'checked' : ''} data-cambio="sexo"><span>♀ ${t('femia')}</span></label>
             <label><input type="radio" name="sexo" value="M" ${a.sexo === 'M' ? 'checked' : ''} data-cambio="sexo"><span>♂ ${t('macho')}</span></label></div>`)}
@@ -337,7 +339,15 @@ X.vAnimais = (() => {
     proporComida(el.form);
     actualizarPais(el.form);
     el.form.querySelector('#listaRazas').innerHTML = opcionsRazas(el.value);
+    // Nun animal lido, se a raza era proposta (ou está baleira), proponse a última desa especie
+    const raza = el.form.elements.raza;
+    if (el.form.elements.deLectura && !el.form.elements.razaCodigo.value && (raza.dataset.propostaRaza || !raza.value)) {
+      raza.value = X.dib.ultimaRaza(el.value) || '';
+      raza.dataset.propostaRaza = raza.value ? '1' : '';
+    }
   };
+  // Se se escribe a raza a man, deixa de ser proposta
+  X.entradas['raza-manual'] = el => { el.dataset.propostaRaza = ''; };
 
   // Engade ao historial os eventos reprodutivos que cambiaron
   function eventos(prev, a) {
@@ -366,7 +376,8 @@ X.vAnimais = (() => {
     const dibEspecie = X.razas.codigoEspecie(D.obter('especies', s('especieId')));
     const infoRaza = razaCodigo && X.razas.info(razaCodigo);
     if (raza && razaCodigo && (!infoRaza || !infoRaza.dib)) X.razas.gardar(razaCodigo, infoRaza ? infoRaza.nome : raza, dibEspecie, s('especieId'));
-    if (codLido) X.dib.lembrarEspecie(s('especieId'));
+    const deLectura = !!f.get('deLectura');
+    if (deLectura) X.dib.lembrar(s('especieId'), raza);
 
     const a = {
       ...(prev || {}), id,
@@ -389,7 +400,8 @@ X.vAnimais = (() => {
     a.historial = eventos(prev, a);
     delete a.grupoId; // formato antigo (un só grupo)
     D.gardarAnimal(a);
-    ui.toast(t('gardado'), 'ok');
+    // Despois dunha lectura, ofrece ler o seguinte animal
+    ui.toast(t('gardado'), 'ok', deLectura ? { texto: t('lerOutro'), fn: () => X.dib.abrir() } : null);
     verFicha(id);
   };
 
