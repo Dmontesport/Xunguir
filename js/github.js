@@ -87,7 +87,7 @@ X.gh = (() => {
   async function baixarFoto(r) {
     const res = await api(`/contents/${ruta(r)}${ref()}`, { accept: 'application/vnd.github.raw' });
     if (!res.ok) throw await erro(res);
-    return res.blob();
+    return new Blob([await res.blob()], { type: 'image/jpeg' }); // GitHub devólvea co seu tipo propio
   }
 
   async function probar() {

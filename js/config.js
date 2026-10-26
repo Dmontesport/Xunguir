@@ -3,7 +3,7 @@ window.X = window.X || {};
 
 // Versión da app. Ao publicar unha versión nova, cambiala aquí e en version.json:
 // os usuarios que teñan a app aberta verán o aviso "Hai unha versión nova".
-X.VERSION = '2.0.4';
+X.VERSION = '2.0.5';
 
 // Proxectos de Supabase. As claves "publishable" son públicas: poden ir na app.
 // (A clave service_role NUNCA debe ir aquí.)

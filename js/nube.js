@@ -122,8 +122,12 @@ X.nube = (() => {
   // ---------- Fotos (cartafol do usuario no depósito "fotos") ----------
   const camiño = ruta => `${sesion.user.id}/${ruta}`;
 
+  // As fotos sempre se gardan como imaxe: as que viñan da versión anterior (GitHub)
+  // tiñan o tipo "application/vnd.github.raw" e o depósito só admite imaxes
   async function subirFoto(ruta, blob) {
-    const { error } = await limite(sb.storage.from('fotos').upload(camiño(ruta), blob, { upsert: true, contentType: blob.type || 'image/jpeg' }), 60000);
+    const tipo = /^image\/(jpeg|png|webp)$/.test(blob.type) ? blob.type : 'image/jpeg';
+    const imaxe = blob.type === tipo ? blob : new Blob([blob], { type: tipo });
+    const { error } = await limite(sb.storage.from('fotos').upload(camiño(ruta), imaxe, { upsert: true, contentType: tipo }), 60000);
     if (error) throw error;
   }
 
