@@ -396,7 +396,10 @@ X.vAnimais = (() => {
       a.venda = s('vendaData') ? { data: s('vendaData'), comprador: s('vendaComprador'), prezo: u.num(f.get('vendaPrezo')) } : null;
     }
     const ficheiro = f.get('foto');
-    if (ficheiro && ficheiro.size) a.foto = await X.fotos.engadir(id, ficheiro);
+    if (ficheiro && ficheiro.size) {
+      a.foto = await X.fotos.engadir(id, ficheiro);
+      if (prev && prev.foto) X.fotos.borrar(prev.foto);
+    }
     a.historial = eventos(prev, a);
     delete a.grupoId; // formato antigo (un só grupo)
     D.gardarAnimal(a);
@@ -419,6 +422,7 @@ X.vAnimais = (() => {
     try {
       const ruta = await X.fotos.engadir(a.id, fx);
       D.gardarAnimal({ ...a, foto: ruta });
+      if (a.foto) X.fotos.borrar(a.foto);
       ui.toast(t('fotoGardada'), 'ok');
     } catch (e) { ui.toast(e.message, 'erro'); }
   };

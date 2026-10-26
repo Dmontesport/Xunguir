@@ -1,6 +1,6 @@
 'use strict';
 
-// Fotos: compresión no navegador, caché en IndexedDB e subida a GitHub
+// Fotos: compresión no navegador, caché en IndexedDB e subida a Supabase
 X.fotos = (() => {
   let dbp = null;
   const urls = new Map(), descargas = new Map();
@@ -57,20 +57,38 @@ X.fotos = (() => {
   }
 
   async function subirPendentes() {
-    if (!X.gh.activo()) return;
+    if (!X.nube.sesion()) return;
     const lista = await op('pendentes', 'readonly', s => s.getAllKeys());
     for (const r of lista || []) {
       const blob = await ler(r);
-      if (blob) await X.gh.subirFoto(r, blob);
+      if (blob) await X.nube.subirFoto(r, blob);
       await op('pendentes', 'readwrite', s => s.delete(r));
     }
+  }
+
+  const marcarPendente = r => op('pendentes', 'readwrite', s => s.put(1, r));
+
+  // Ao cambiar a foto dun animal, borra a anterior (aquí e no servidor) para non ocupar espazo
+  async function borrar(r) {
+    if (!r) return;
+    urls.delete(r);
+    await op('fotos', 'readwrite', s => s.delete(r)).catch(() => {});
+    await op('pendentes', 'readwrite', s => s.delete(r)).catch(() => {});
+    if (X.nube.sesion()) X.nube.borrarFoto(r).catch(() => { /* sen conexión: queda no servidor */ });
+  }
+
+  // Versión anterior: trae a foto do repositorio de GitHub (se este dispositivo tiña o token)
+  async function traerDeGitHub(r) {
+    if (await ler(r)) return true;
+    if (!X.gh.activo()) return false;
+    try { await escribir(r, await X.gh.baixarFoto(r)); return true; } catch { return false; }
   }
 
   async function url(r) {
     if (urls.has(r)) return urls.get(r);
     let blob = await ler(r);
-    if (!blob && X.gh.activo()) {
-      if (!descargas.has(r)) descargas.set(r, X.gh.baixarFoto(r));
+    if (!blob && X.nube.sesion()) {
+      if (!descargas.has(r)) descargas.set(r, X.nube.baixarFoto(r));
       try { blob = await descargas.get(r); await escribir(r, blob); }
       catch { descargas.delete(r); return null; }
     }
@@ -113,5 +131,5 @@ X.fotos = (() => {
     await new Promise(res => { const r = indexedDB.deleteDatabase('xunguir'); r.onsuccess = r.onerror = r.onblocked = () => res(); });
   }
 
-  return { engadir, subirPendentes, url, src, hidratar, exportar, importar, borrarTodo };
+  return { engadir, subirPendentes, marcarPendente, borrar, traerDeGitHub, url, src, hidratar, exportar, importar, borrarTodo };
 })();

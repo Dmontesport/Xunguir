@@ -1,6 +1,7 @@
 'use strict';
 
-// Acceso ao repositorio privado de datos en GitHub (API de contidos)
+// Acceso ao repositorio de datos en GitHub da versión anterior (antes das contas).
+// Só se usa unha vez, para pasar as fotos dese repositorio á conta nova.
 X.gh = (() => {
   const CLAVE = 'xunguir.github';
   const FICHEIRO = 'xunguir.json';
@@ -97,61 +98,4 @@ X.gh = (() => {
   }
 
   return { conf, gardarConf, borrarConf, activo, lerDatos, escribirDatos, subirFoto, baixarFoto, probar };
-})();
-
-// Sincronización: le o remoto, fusiona co local e sobe o resultado se fai falta
-X.sync = (() => {
-  const st = { estado: 'local', msg: '', ultima: null };
-  let timer = null, enCurso = false, repetir = false;
-
-  function set(estado, msg = '') {
-    st.estado = estado;
-    st.msg = msg;
-    if (estado === 'ok') st.ultima = new Date();
-    if (X.app && X.app.renderSync) X.app.renderSync();
-  }
-
-  function programar(ms = 2500) {
-    clearTimeout(timer);
-    if (!X.gh.activo()) { set('local'); return; }
-    set('pendente');
-    timer = setTimeout(executar, ms);
-  }
-
-  const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-
-  async function executar() {
-    clearTimeout(timer);
-    if (!X.gh.activo()) { set('local'); return; }
-    if (enCurso) { repetir = true; return; }
-    enCurso = true;
-    set('sincronizando');
-    try {
-      let feito = false;
-      for (let intento = 0; intento < 3 && !feito; intento++) {
-        const { datos: remoto, sha } = await X.gh.lerDatos();
-        const local = X.datos.ordenar(X.datos.estado());
-        const fus = remoto ? X.datos.fusionar(local, remoto) : X.datos.fusionar(local, {});
-        if (!igual(fus, local)) X.datos.substituir(fus);
-        const v0 = X.datos.version();
-        if (!remoto || !igual(fus, X.datos.ordenar(remoto))) {
-          try { await X.gh.escribirDatos(fus, sha); }
-          catch (e) { if (e.conflito) continue; throw e; }
-        }
-        if (X.datos.version() === v0) X.datos.limparSucio(); else repetir = true;
-        feito = true;
-      }
-      if (!feito) throw new Error(X.t('syncConflito'));
-      await X.fotos.subirPendentes();
-      set('ok');
-    } catch (e) {
-      console.error(e);
-      set(navigator.onLine === false ? 'pendente' : 'erro', e.message);
-    } finally {
-      enCurso = false;
-      if (repetir) { repetir = false; programar(); }
-    }
-  }
-
-  return { st, programar, executar };
 })();

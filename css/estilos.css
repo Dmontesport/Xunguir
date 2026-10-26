@@ -483,6 +483,43 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .destino.novo { border-style: dashed; color: var(--primario); }
 .destino.novo .ic { width: 16px; height: 16px; }
 
+/* ---------- Acceso (antes de entrar) ---------- */
+.sen-sesion .barra, .sen-sesion .vista { display: none; }
+.pantalla-acceso {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+}
+.acceso-caixa {
+  width: min(420px, 100%); background: var(--superficie); border-radius: 20px; box-shadow: var(--sombra);
+  padding: 28px 24px; display: flex; flex-direction: column; gap: 14px;
+}
+.acceso-marca { display: flex; align-items: center; gap: 12px; }
+.acceso-marca .logo { width: 48px; height: 48px; }
+.acceso-marca h1 { flex: 1; font-size: 1.6rem; }
+.acceso-caixa h2 { font-size: 1.2rem; }
+.acceso-form { display: flex; flex-direction: column; gap: 12px; }
+.acceso-form .btn.primario { min-height: 46px; font-size: 1rem; }
+.acceso-form .enlace { align-self: center; font-weight: 500; }
+.acceso-erro { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--vermello-suave); color: var(--vermello); font-weight: 600; }
+.acceso-lista { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--texto-2); }
+.acceso-ligazons { margin: 0; text-align: center; }
+.acceso-lingua { text-align: center; color: var(--texto-2); font-size: .85rem; }
+.acceso-lingua .enlace { color: var(--texto-2); font-weight: 500; }
+.acceso-lingua .enlace.activa { color: var(--primario); font-weight: 700; }
+.conta-correo { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
+
+/* Aviso de versión nova */
+.aviso-version {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px;
+  padding: 8px 16px; background: var(--azul-suave); color: var(--azul); font-weight: 600; font-size: .9rem;
+}
+
+/* Textos legais */
+.texto-legal { line-height: 1.55; }
+.texto-legal h4 { color: var(--texto); margin: 18px 0 6px; }
+.texto-legal ul { padding-left: 20px; }
+.texto-legal li { margin-bottom: 6px; }
+
 /* ---------- Lector DIB ---------- */
 .modos-lector { margin-bottom: 12px; }
 .baston {

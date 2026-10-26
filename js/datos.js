@@ -1,10 +1,11 @@
 'use strict';
 
-// Estado da aplicación, persistencia local e fusión con GitHub.
-// Cada rexistro leva `upd` (marca de tempo) e `del` (borrado) para poder fusionar
+// Estado da aplicación e persistencia local (un estado por usuario).
+// Cada rexistro leva `upd` (marca de tempo) e `del` (borrado) para poder combinar
 // os cambios feitos en varios dispositivos: gaña o rexistro máis recente.
+// `pendentes` garda que rexistros cambiaron aquí e aínda non se subiron ao servidor.
 X.datos = (() => {
-  const CLAVE = 'xunguir.estado', CLAVE_SUCIO = 'xunguir.sucio';
+  const CLAVE_VELLA = 'xunguir.estado'; // versión anterior (sincronización con GitHub)
   const COLECCIONS = ['especies', 'animais', 'grupos', 'parcelas', 'lotes'];
 
   // Parámetros por especie. Comida en kg de materia seca/día.
@@ -36,9 +37,12 @@ X.datos = (() => {
   };
 
   let estado = null;
-  let rev = 0;      // cambia con calquera modificación (para cachés)
-  let version = 0;  // cambia só con modificacións locais (para a sincronización)
+  let uid = null;
+  let pendentes = new Set();  // "coleccion:id" cambiados aquí sen subir
+  let rev = 0;                // cambia con calquera modificación (para cachés)
   let enLote = 0, pendente = false;
+
+  const clave = k => `xunguir.${k}.${uid}`;
 
   const novo = () => ({
     v: 1,
@@ -56,21 +60,27 @@ X.datos = (() => {
     return e;
   }
 
-  function cargar() {
-    try { estado = JSON.parse(localStorage.getItem(CLAVE)); } catch { estado = null; }
+  const lerJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+
+  function cargar(usuario) {
+    uid = usuario;
+    estado = lerJSON(clave('estado'));
     if (!estado || !estado.v) estado = novo();
     normalizar(estado);
+    pendentes = new Set(lerJSON(clave('pendentes')) || []);
+    rev++;
   }
 
   function persistir() {
-    try { localStorage.setItem(CLAVE, JSON.stringify(estado)); }
-    catch { X.ui.toast(X.t('erroGardarLocal'), 'erro'); }
+    try {
+      localStorage.setItem(clave('estado'), JSON.stringify(estado));
+      localStorage.setItem(clave('pendentes'), JSON.stringify([...pendentes]));
+    } catch { X.ui.toast(X.t('erroGardarLocal'), 'erro'); }
   }
 
   function cambiado() {
-    rev++; version++;
+    rev++;
     persistir();
-    localStorage.setItem(CLAVE_SUCIO, '1');
     X.sync.programar();
     X.app.render();
   }
@@ -89,6 +99,7 @@ X.datos = (() => {
     obj = { ...obj, upd: Date.now() };
     const i = estado[col].findIndex(x => x.id === obj.id);
     if (i >= 0) estado[col][i] = obj; else estado[col].push(obj);
+    pendentes.add(`${col}:${obj.id}`);
     if (enLote) pendente = true; else cambiado();
     return obj;
   }
@@ -97,6 +108,7 @@ X.datos = (() => {
     const i = estado[col].findIndex(x => x.id === id);
     if (i < 0) return;
     estado[col][i] = { id, del: true, upd: Date.now() };
+    pendentes.add(`${col}:${id}`);
     if (enLote) pendente = true; else cambiado();
   }
 
@@ -118,17 +130,65 @@ X.datos = (() => {
 
   function gardarConfig(cfg) {
     estado.config = { ...estado.config, ...cfg, upd: Date.now() };
+    pendentes.add('config:config');
     cambiado();
   }
 
-  // ---- Fusión entre dispositivos ----
-  function ordenar(e) {
-    const r = { v: 1, config: e.config };
-    for (const c of COLECCIONS) r[c] = [...(e[c] || [])].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    return r;
+  // ---- Sincronización co servidor ----
+  const separar = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
+
+  // Rexistros cambiados aquí, listos para subir
+  function cambiosPendentes() {
+    return [...pendentes].map(k => {
+      const [coleccion, id] = separar(k);
+      const obj = coleccion === 'config' ? estado.config : (estado[coleccion] || []).find(x => x.id === id);
+      if (!obj) { pendentes.delete(k); return null; } // xa non existe: nada que subir
+      return { coleccion, id, datos: obj, upd: obj.upd || 0, del: !!obj.del };
+    }).filter(Boolean);
   }
 
-  // En caso de empate gaña `b` (o remoto), para non entrar nun bucle de subidas
+  // Quita de pendentes os que se subiron (se non volveron cambiar mentres tanto)
+  function confirmarSubidos(filas) {
+    for (const f of filas) {
+      const actual = cambiosPendentes().find(x => x.coleccion === f.coleccion && x.id === f.id);
+      if (!actual || actual.upd === f.upd) pendentes.delete(`${f.coleccion}:${f.id}`);
+    }
+    persistir();
+  }
+
+  // Aplica o que chega do servidor: gaña o rexistro máis recente
+  function aplicarRemotos(filas) {
+    let cambios = 0;
+    for (const f of filas) {
+      if (f.coleccion === 'config') {
+        if ((f.upd || 0) > (estado.config.upd || 0)) { estado.config = { ...f.datos, upd: f.upd }; cambios++; }
+        continue;
+      }
+      const col = estado[f.coleccion];
+      if (!col) continue;
+      const i = col.findIndex(x => x.id === f.id);
+      const local = i >= 0 ? col[i] : null;
+      if (local && (local.upd || 0) >= (f.upd || 0)) continue;
+      const novoRex = f.del ? { id: f.id, del: true, upd: f.upd } : { ...f.datos, id: f.id, upd: f.upd };
+      if (i >= 0) col[i] = novoRex; else col.push(novoRex);
+      pendentes.delete(`${f.coleccion}:${f.id}`);
+      cambios++;
+    }
+    if (cambios) { normalizar(estado); rev++; persistir(); X.app.render(); }
+    return cambios;
+  }
+
+  const ultimaSync = () => localStorage.getItem(clave('ultimaSync'));
+  const gardarUltimaSync = s => localStorage.setItem(clave('ultimaSync'), s);
+
+  // Marca todo como pendente de subir (ao importar unha copia ou pasar datos da versión anterior)
+  function marcarTodoPendente() {
+    pendentes.add('config:config');
+    for (const c of COLECCIONS) for (const x of estado[c]) pendentes.add(`${c}:${x.id}`);
+    persistir();
+  }
+
+  // ---- Combinar con outra copia (importar) ----
   function fusionar(a, b) {
     const r = { v: 1 };
     const updA = (a.config && a.config.upd) || 0, updB = (b.config && b.config.upd) || 0;
@@ -142,10 +202,9 @@ X.datos = (() => {
       }
       r[c] = [...m.values()];
     }
-    return normalizar(ordenar(r));
+    return normalizar(r);
   }
 
-  // Substitúe o estado polo resultado dunha sincronización (non marca cambios locais)
   function substituir(novoEstado) {
     estado = normalizar(novoEstado);
     rev++;
@@ -153,19 +212,25 @@ X.datos = (() => {
     X.app.render();
   }
 
-  const sucio = () => localStorage.getItem(CLAVE_SUCIO) === '1';
-  const limparSucio = () => localStorage.removeItem(CLAVE_SUCIO);
-  const marcarSucio = () => localStorage.setItem(CLAVE_SUCIO, '1');
+  // Datos da versión anterior (antes das contas) gardados neste dispositivo
+  const estadoVello = () => { const e = lerJSON(CLAVE_VELLA); return e && e.v ? normalizar(e) : null; };
+  const arquivarVello = () => {
+    localStorage.setItem(`${CLAVE_VELLA}.antigo`, localStorage.getItem(CLAVE_VELLA) || '');
+    localStorage.removeItem(CLAVE_VELLA);
+  };
 
+  // Ao pechar sesión: borra os datos deste usuario do dispositivo
   function borrarLocal() {
-    localStorage.removeItem(CLAVE);
-    localStorage.removeItem(CLAVE_SUCIO);
+    for (const k of ['estado', 'pendentes', 'ultimaSync']) localStorage.removeItem(clave(k));
+    estado = null; uid = null; pendentes = new Set();
   }
 
   return {
-    PRESETS, RAZAS_DEF, cargar, lista, obter, gardar, borrar, gardarAnimal, gardarConfig, lote,
-    fusionar, ordenar, substituir, sucio, limparSucio, marcarSucio, borrarLocal,
-    estado: () => estado, config: () => estado.config, rev: () => rev, version: () => version,
+    PRESETS, RAZAS_DEF, COLECCIONS, cargar, lista, obter, gardar, borrar, gardarAnimal, gardarConfig, lote,
+    cambiosPendentes, confirmarSubidos, aplicarRemotos, ultimaSync, gardarUltimaSync, marcarTodoPendente,
+    fusionar, substituir, estadoVello, arquivarVello, borrarLocal,
+    nPendentes: () => pendentes.size, listo: () => !!estado,
+    estado: () => estado, config: () => estado.config, rev: () => rev,
   };
 })();
 

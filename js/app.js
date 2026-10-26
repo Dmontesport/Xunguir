@@ -84,7 +84,7 @@ X.app = (() => {
   };
   X.accions['pechar-panel'] = el => { $('#panelAvisos').hidden = true; location.hash = el.getAttribute('href'); };
   X.accions.sync = () => {
-    if (!X.gh.activo()) { location.hash = '#config'; return; }
+    if (!X.nube.sesion()) { location.hash = '#config'; return; }
     X.sync.executar();
   };
   X.accions['ir-aviso'] = el => {
@@ -146,17 +146,57 @@ X.app = (() => {
     setInterval(() => { if (document.visibilityState === 'visible') X.sync.executar(); }, 120000);
   }
 
-  function iniciar() {
+  // ---- Aviso de versión nova ----
+  // Compara a versión desta app con version.json do servidor (ao abrir, ao volver á app e cada 30 min)
+  let versionAvisada = false;
+  async function comprobarVersion() {
+    if (versionAvisada || !location.protocol.startsWith('http')) return;
+    try {
+      const v = (await (await fetch('version.json', { cache: 'no-store' })).json()).version;
+      if (v && v !== X.VERSION) {
+        versionAvisada = true;
+        const b = $('#avisoVersion');
+        b.innerHTML = `<span>${t('novaVersion', { v: u.esc(v) })}</span><button class="btn peq primario" data-accion="actualizar">${t('actualizar')}</button>`;
+        b.hidden = false;
+      }
+    } catch { /* sen conexión */ }
+  }
+  X.accions.actualizar = () => location.reload();
+
+  async function iniciar() {
     X.lang = localStorage.getItem('xunguir.lingua') || 'gl';
     document.documentElement.lang = X.lang;
-    X.datos.cargar();
-    listo = true;
     eventos();
-    navegar();
-    if (X.gh.activo()) X.sync.executar(); else X.sync.programar();
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       navigator.serviceWorker.register('sw.js').catch(() => { /* sen modo sen conexión */ });
     }
+
+    // 1. Sesión: a gardada, ou a que trae unha ligazón de invitación/recuperación; se non, pantalla de acceso.
+    //    Sen conexión, segue co último usuario deste dispositivo.
+    const enlace = X.nube.enlace;
+    let sesion = await X.nube.iniciar();
+    const offline = !sesion && navigator.onLine === false && X.nube.uidSenConexion();
+    if (!sesion && !offline) {
+      await X.acceso.entrar(enlace.erro ? t('enlaceCaducado') : null);
+      sesion = X.nube.sesion();
+    } else if (sesion && (enlace.tipo === 'invite' || enlace.tipo === 'recovery')) {
+      await X.acceso.pedirContrasinal(enlace.tipo);
+    }
+
+    // 2. Textos legais aceptados na versión actual
+    if (!await X.legal.aceptado().catch(() => !!offline)) await X.acceso.aceptar();
+    X.acceso.pecharPantalla();
+
+    // 3. Datos deste usuario
+    X.datos.cargar(X.nube.uid() || X.nube.uidSenConexion());
+    listo = true;
+    navegar();
+    X.sync.executar();
+    await X.acceso.migrar();
+
+    comprobarVersion();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarVersion(); });
+    setInterval(comprobarVersion, 30 * 60000);
   }
 
   document.addEventListener('DOMContentLoaded', iniciar);

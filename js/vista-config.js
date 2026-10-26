@@ -1,24 +1,36 @@
 'use strict';
 
-// Configuración: idioma, avisos, especies, GitHub e copias de seguridade
+// Configuración: conta, idioma, avisos, especies, razas, copias e textos legais
 X.vConfig = (() => {
   const u = X.u, ui = X.ui, D = X.datos;
   const t = (...a) => X.t(...a);
 
   function estadoSync() {
     const s = X.sync.st;
-    if (!X.gh.activo()) return `<p class="estado-sync gris">${ui.ic('cloudOff')} ${t('syncLocal')}</p>`;
+    if (!X.nube.sesion()) return `<p class="estado-sync pendente">${ui.ic('cloudOff')} ${t('senConexionConta')}</p>`;
     const txt = { ok: t('syncOk', { h: s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '' }), pendente: t('syncPendente'), sincronizando: t('syncEnCurso'), erro: t('syncErro', { msg: s.msg }), local: t('syncLocal') }[s.estado];
     return `<p class="estado-sync ${s.estado}">${ui.ic(s.estado === 'erro' ? 'alert' : 'cloud')} ${u.esc(txt)}</p>`;
   }
 
   function render(main) {
-    const av = D.config().avisos, gh = X.gh.conf();
+    const av = D.config().avisos;
     const especies = D.lista('especies').sort(u.porNome);
     const usos = id => D.lista('animais').filter(a => a.especieId === id).length;
+    const correo = X.nube.correo() || localStorage.getItem('xunguir.ultimoCorreo') || '';
 
     main.innerHTML = `<div class="config">
       <h1>${t('configuracion')}</h1>
+
+      <section class="tarxeta-config">
+        <h2>${t('minaConta')}${X.nube.entorno === 'test' ? ` <span class="chip ambar">${t('probas')}</span>` : ''}</h2>
+        <p class="conta-correo">${ui.ic('cloud')} <b>${u.esc(correo)}</b></p>
+        ${estadoSync()}
+        <div class="botons">
+          <button type="button" class="btn" data-accion="sync">${ui.ic('refresh')}<span>${t('syncAgora')}</span></button>
+          <button type="button" class="btn" data-accion="cambiar-contrasinal">${t('cambiarContrasinal')}</button>
+          <button type="button" class="btn" data-accion="pechar-sesion">${t('pecharSesion')}</button>
+        </div>
+      </section>
 
       <section class="tarxeta-config">
         <h2>${t('idioma')}</h2>
@@ -74,23 +86,6 @@ X.vConfig = (() => {
         <div class="botons">${ui.btnGardar()}</div>
       </form>
 
-      <form class="tarxeta-config" data-form="github">
-        <h2>${t('syncTitulo')}</h2>
-        ${estadoSync()}
-        <p class="nota">${t('syncAxuda')}</p>
-        <div class="grella-campos">
-          ${ui.campo(t('ghUsuario'), ui.entrada('owner', gh.owner, 'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="usuario"'))}
-          ${ui.campo(t('ghRepo'), ui.entrada('repo', gh.repo, 'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xunguir-datos"'))}
-          ${ui.campo(t('ghRama'), ui.entrada('branch', gh.branch, 'autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="main"'), t('ghRamaAxuda'))}
-          ${ui.campo(t('ghToken'), ui.entrada('token', gh.token, 'type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"'), t('ghTokenAxuda'))}
-        </div>
-        <div class="botons">
-          ${ui.btnGardar(t('gardarProbar'))}
-          ${X.gh.activo() ? `<button type="button" class="btn" data-accion="sync">${ui.ic('refresh')}<span>${t('syncAgora')}</span></button>
-            <button type="button" class="btn perigo-texto" data-accion="desconectar">${t('desconectar')}</button>` : ''}
-        </div>
-      </form>
-
       <section class="tarxeta-config">
         <h2>${t('copia')}</h2>
         <p class="nota">${t('copiaAxuda')}</p>
@@ -100,12 +95,19 @@ X.vConfig = (() => {
         </div>
       </section>
 
-      <section class="tarxeta-config perigo">
-        <h2>${t('esteDispositivo')}</h2>
-        <p class="nota">${t('borrarLocalAxuda')}</p>
-        <div class="botons"><button class="btn perigo-texto" data-accion="borrar-local">${ui.ic('trash')}<span>${t('borrarLocal')}</span></button></div>
+      <section class="tarxeta-config">
+        <h2>${t('legal')}</h2>
+        <div class="botons">
+          ${['termos', 'privacidade', 'aviso'].map(d => `<button class="btn" data-accion="ver-legal" data-doc="${d}">${t('legal_' + d)}</button>`).join('')}
+        </div>
       </section>
-      <p class="version">Xunguir · v1.0</p>
+
+      <section class="tarxeta-config perigo">
+        <h2>${t('borrarConta')}</h2>
+        <p class="nota">${t('borrarContaAxuda')}</p>
+        <div class="botons"><button class="btn perigo-texto" data-accion="borrar-conta">${ui.ic('trash')}<span>${t('borrarConta')}</span></button></div>
+      </section>
+      <p class="version">Xunguir · v${X.VERSION}${X.nube.entorno === 'test' ? ` · ${t('probas')}` : ''}</p>
     </div>`;
   }
 
@@ -145,30 +147,45 @@ X.vConfig = (() => {
     ui.toast(t('gardado'), 'ok');
   };
 
-  X.formularios.github = async form => {
-    const f = new FormData(form), s = k => (f.get(k) || '').toString().trim();
-    const conf = { owner: s('owner'), repo: s('repo'), branch: s('branch'), token: s('token') };
-    if (!conf.owner || !conf.repo || !conf.token) { ui.toast(t('ghFaltan'), 'erro'); return; }
-    X.gh.gardarConf(conf);
+  // ---------- Conta ----------
+  X.accions['cambiar-contrasinal'] = () => ui.modal.abrir(`<form data-form="cambiar-contrasinal" class="modal-form peq">
+    ${ui.cab(t('cambiarContrasinal'))}
+    <div class="modal-corpo"><div class="grella-campos">
+      ${ui.campo(t('contrasinal'), ui.entrada('c1', '', 'type="password" required minlength="8" autocomplete="new-password" autofocus'), t('minimo8'))}
+      ${ui.campo(t('repetirContrasinal'), ui.entrada('c2', '', 'type="password" required minlength="8" autocomplete="new-password"'))}
+    </div></div>
+    ${ui.pe(`<button type="button" class="btn" data-accion="pechar">${t('cancelar')}</button>${ui.btnGardar()}`)}</form>`);
+  X.formularios['cambiar-contrasinal'] = async form => {
+    const f = new FormData(form);
+    if (f.get('c1') !== f.get('c2')) { ui.toast(t('contrasinaisDistintos'), 'erro'); return; }
+    await X.nube.cambiarContrasinal(String(f.get('c1')));
+    ui.modal.pechar();
+    ui.toast(t('contrasinalGardado'), 'ok');
+  };
+
+  // Pechar sesión: primeiro intenta subir o pendente; os datos deste usuario bórranse do dispositivo
+  X.accions['pechar-sesion'] = async () => {
+    if (D.nPendentes() && navigator.onLine !== false) await X.sync.executar();
+    const msg = D.nPendentes() ? t('confSairPendentes', { n: D.nPendentes() }) : t('confSair');
+    if (!await ui.confirmar(msg, { aceptar: t('pecharSesion'), perigo: D.nPendentes() > 0 })) return;
+    D.borrarLocal();
+    await X.fotos.borrarTodo();
+    await X.nube.sair();
+    location.hash = '';
+    location.reload();
+  };
+
+  X.accions['borrar-conta'] = async () => {
+    if (!await ui.confirmar(t('confBorrarConta'), { aceptar: t('borrarConta'), perigo: true })) return;
+    if (!await ui.confirmar(t('confBorrarConta2'), { aceptar: t('borrarDefinitivamente'), perigo: true })) return;
     try {
-      const r = await X.gh.probar();
-      if (!r.escritura) { ui.toast(t('ghSenEscritura'), 'erro'); return; }
-      ui.toast(r.privado ? t('ghOk', { repo: r.nome }) : t('ghOkPublico', { repo: r.nome }), r.privado ? 'ok' : 'aviso');
-      D.marcarSucio();
-      await X.sync.executar();
-    } catch (e) {
-      ui.toast(e.status === 401 ? t('ghTokenMal') : e.status === 404 ? t('ghNonAtopado') : e.message, 'erro');
-    }
-    X.app.render();
+      await X.nube.borrarConta();
+      D.borrarLocal();
+      await X.fotos.borrarTodo();
+      location.hash = '';
+      location.reload();
+    } catch (e) { ui.toast(e.message, 'erro'); }
   };
-
-  X.accions.desconectar = async () => {
-    if (!await ui.confirmar(t('confDesconectar'), { aceptar: t('desconectar') })) return;
-    X.gh.borrarConf();
-    X.sync.programar();
-    X.app.render();
-  };
-
   X.accions.exportar = async () => {
     const e = D.estado();
     const rutas = e.animais.filter(a => !a.del && a.foto).map(a => a.foto);
@@ -193,18 +210,10 @@ X.vConfig = (() => {
       if (!await ui.confirmar(t('confImportar', { n: copia.datos.animais.filter(a => !a.del).length }), { aceptar: t('importar') })) return;
       await X.fotos.importar(copia.fotos);
       D.substituir(D.fusionar(D.estado(), copia.datos));
-      D.marcarSucio();
+      D.marcarTodoPendente();
       X.sync.programar(500);
       ui.toast(t('importado'), 'ok');
     } catch (e) { ui.toast(e.message, 'erro'); }
-  };
-
-  X.accions['borrar-local'] = async () => {
-    const aviso = D.sucio() && X.gh.activo() ? t('confBorrarLocalSucio') : X.gh.activo() ? t('confBorrarLocal') : t('confBorrarLocalSenSync');
-    if (!await ui.confirmar(aviso, { aceptar: t('borrar'), perigo: true })) return;
-    D.borrarLocal();
-    await X.fotos.borrarTodo();
-    location.reload();
   };
 
   // ---------- Especies ----------
