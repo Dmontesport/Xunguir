@@ -137,11 +137,23 @@ X.datos = (() => {
   // ---- Sincronización co servidor ----
   const separar = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
 
+  // Busca un rexistro por colección e id (con índices, para que vaia rápido con miles de rexistros)
+  function buscador() {
+    const indices = {};
+    return (coleccion, id) => {
+      if (coleccion === 'config') return estado.config;
+      if (!estado[coleccion]) return null;
+      if (!indices[coleccion]) indices[coleccion] = new Map(estado[coleccion].map(x => [x.id, x]));
+      return indices[coleccion].get(id) || null;
+    };
+  }
+
   // Rexistros cambiados aquí, listos para subir
   function cambiosPendentes() {
+    const buscar = buscador();
     return [...pendentes].map(k => {
       const [coleccion, id] = separar(k);
-      const obj = coleccion === 'config' ? estado.config : (estado[coleccion] || []).find(x => x.id === id);
+      const obj = buscar(coleccion, id);
       if (!obj) { pendentes.delete(k); return null; } // xa non existe: nada que subir
       return { coleccion, id, datos: obj, upd: obj.upd || 0, del: !!obj.del };
     }).filter(Boolean);
@@ -149,9 +161,10 @@ X.datos = (() => {
 
   // Quita de pendentes os que se subiron (se non volveron cambiar mentres tanto)
   function confirmarSubidos(filas) {
+    const buscar = buscador();
     for (const f of filas) {
-      const actual = cambiosPendentes().find(x => x.coleccion === f.coleccion && x.id === f.id);
-      if (!actual || actual.upd === f.upd) pendentes.delete(`${f.coleccion}:${f.id}`);
+      const actual = buscar(f.coleccion, f.id);
+      if (!actual || (actual.upd || 0) === f.upd) pendentes.delete(`${f.coleccion}:${f.id}`);
     }
     persistir();
   }
@@ -159,6 +172,7 @@ X.datos = (() => {
   // Aplica o que chega do servidor: gaña o rexistro máis recente
   function aplicarRemotos(filas) {
     let cambios = 0;
+    const posicions = {}; // coleccion → Map(id → posición), para non percorrer a lista en cada fila
     for (const f of filas) {
       if (f.coleccion === 'config') {
         if ((f.upd || 0) > (estado.config.upd || 0)) { estado.config = { ...f.datos, upd: f.upd }; cambios++; }
@@ -166,11 +180,13 @@ X.datos = (() => {
       }
       const col = estado[f.coleccion];
       if (!col) continue;
-      const i = col.findIndex(x => x.id === f.id);
+      if (!posicions[f.coleccion]) posicions[f.coleccion] = new Map(col.map((x, j) => [x.id, j]));
+      const pos = posicions[f.coleccion];
+      const i = pos.has(f.id) ? pos.get(f.id) : -1;
       const local = i >= 0 ? col[i] : null;
       if (local && (local.upd || 0) >= (f.upd || 0)) continue;
       const novoRex = f.del ? { id: f.id, del: true, upd: f.upd } : { ...f.datos, id: f.id, upd: f.upd };
-      if (i >= 0) col[i] = novoRex; else col.push(novoRex);
+      if (i >= 0) col[i] = novoRex; else { pos.set(f.id, col.length); col.push(novoRex); }
       pendentes.delete(`${f.coleccion}:${f.id}`);
       cambios++;
     }

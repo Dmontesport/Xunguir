@@ -32,11 +32,11 @@ X.app = (() => {
     const s = X.sync.st;
     const hora = s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '';
     const m = {
-      local: ['cloudOff', t('syncLocal')], pendente: ['cloud', t('syncPendente')], sincronizando: ['refresh', t('syncEnCurso')],
+      local: ['cloudOff', t('syncLocal')], pendente: ['cloud', t('syncPendente')], sincronizando: ['refresh', s.msg || t('syncEnCurso')],
       ok: ['cloudOk', t('syncOk', { h: hora })], erro: ['alert', t('syncErro', { msg: s.msg })],
     }[s.estado] || ['cloud', ''];
     b.className = `btn-icono sync-${s.estado}`;
-    b.innerHTML = ui.ic(m[0]);
+    b.innerHTML = ui.ic(m[0]) + (s.progreso ? `<span class="sync-progreso">${u.esc(s.progreso)}</span>` : '');
     b.title = m[1];
     b.setAttribute('aria-label', m[1]);
   }

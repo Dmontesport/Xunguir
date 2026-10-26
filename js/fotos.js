@@ -56,14 +56,24 @@ X.fotos = (() => {
     return r;
   }
 
-  async function subirPendentes() {
+  // Sobe as fotos pendentes de tres en tres; progreso(feitas, total) para mostralo
+  async function subirPendentes(progreso) {
     if (!X.nube.sesion()) return;
-    const lista = await op('pendentes', 'readonly', s => s.getAllKeys());
-    for (const r of lista || []) {
-      const blob = await ler(r);
-      if (blob) await X.nube.subirFoto(r, blob);
-      await op('pendentes', 'readwrite', s => s.delete(r));
-    }
+    const lista = (await op('pendentes', 'readonly', s => s.getAllKeys())) || [];
+    if (!lista.length) return;
+    const cola = [...lista];
+    let feitas = 0;
+    const traballador = async () => {
+      while (cola.length) {
+        const r = cola.shift();
+        const blob = await ler(r);
+        if (blob) await X.nube.subirFoto(r, blob);
+        await op('pendentes', 'readwrite', s => s.delete(r));
+        feitas++;
+        if (progreso) progreso(feitas, lista.length);
+      }
+    };
+    await Promise.all([traballador(), traballador(), traballador()]);
   }
 
   const marcarPendente = r => op('pendentes', 'readwrite', s => s.put(1, r));

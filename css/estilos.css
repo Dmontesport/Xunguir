@@ -121,6 +121,8 @@ small { color: var(--texto-2); }
 .sync-erro { color: var(--vermello); }
 .sync-pendente { color: var(--ambar); }
 .sync-sincronizando .ic { animation: xirar 1s linear infinite; }
+.btn-icono:has(.sync-progreso) { width: auto; padding: 0 8px; gap: 4px; }
+.sync-progreso { font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 @keyframes xirar { to { transform: rotate(360deg); } }
 
 @media (max-width: 640px) {

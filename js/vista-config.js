@@ -8,7 +8,7 @@ X.vConfig = (() => {
   function estadoSync() {
     const s = X.sync.st;
     if (!X.nube.sesion()) return `<p class="estado-sync pendente">${ui.ic('cloudOff')} ${t('senConexionConta')}</p>`;
-    const txt = { ok: t('syncOk', { h: s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '' }), pendente: t('syncPendente'), sincronizando: t('syncEnCurso'), erro: t('syncErro', { msg: s.msg }), local: t('syncLocal') }[s.estado];
+    const txt = { ok: t('syncOk', { h: s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '' }), pendente: t('syncPendente'), sincronizando: s.msg || t('syncEnCurso'), erro: t('syncErro', { msg: s.msg }), local: t('syncLocal') }[s.estado];
     return `<p class="estado-sync ${s.estado}">${ui.ic(s.estado === 'erro' ? 'alert' : 'cloud')} ${u.esc(txt)}</p>`;
   }
 

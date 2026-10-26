@@ -21,6 +21,11 @@ X.nube = (() => {
   let sesion = null;
   const CLAVE_UID = `xunguir.uid.${cfg.nome}`;
 
+  // Se unha petición non responde (cobertura moi mala), mellor dar erro e reintentar que quedar esperando
+  const limite = (promesa, ms = 30000) => Promise.race([
+    promesa, new Promise((_, rej) => setTimeout(() => rej(new Error(t('tempoEsgotado'))), ms)),
+  ]);
+
   async function iniciar() {
     try {
       const { data, error } = await sb.auth.getSession();
@@ -90,7 +95,7 @@ X.nube = (() => {
     const uid = sesion.user.id;
     for (let i = 0; i < filas.length; i += 200) {
       const anaco = filas.slice(i, i + 200);
-      const { error } = await sb.from('rexistros').upsert(anaco.map(f => ({ explotacion: uid, ...f })), { onConflict: 'explotacion,coleccion,id' });
+      const { error } = await limite(sb.from('rexistros').upsert(anaco.map(f => ({ explotacion: uid, ...f })), { onConflict: 'explotacion,coleccion,id' }));
       if (error) throw error;
       X.datos.confirmarSubidos(anaco);
     }
@@ -105,7 +110,7 @@ X.nube = (() => {
       let q = sb.from('rexistros').select('coleccion,id,datos,upd,del,servidor')
         .eq('explotacion', sesion.user.id).order('servidor', { ascending: true }).limit(1000);
       if (desde) q = primeira ? q.gte('servidor', desde) : q.gt('servidor', desde);
-      const { data, error } = await q;
+      const { data, error } = await limite(q);
       if (error) throw error;
       X.datos.aplicarRemotos(data);
       if (data.length) { desde = data[data.length - 1].servidor; X.datos.gardarUltimaSync(desde); }
@@ -118,12 +123,12 @@ X.nube = (() => {
   const camiño = ruta => `${sesion.user.id}/${ruta}`;
 
   async function subirFoto(ruta, blob) {
-    const { error } = await sb.storage.from('fotos').upload(camiño(ruta), blob, { upsert: true, contentType: blob.type || 'image/jpeg' });
+    const { error } = await limite(sb.storage.from('fotos').upload(camiño(ruta), blob, { upsert: true, contentType: blob.type || 'image/jpeg' }), 60000);
     if (error) throw error;
   }
 
   async function baixarFoto(ruta) {
-    const { data, error } = await sb.storage.from('fotos').download(camiño(ruta));
+    const { data, error } = await limite(sb.storage.from('fotos').download(camiño(ruta)));
     if (error) throw error;
     return data;
   }
@@ -142,12 +147,13 @@ X.nube = (() => {
 
 // Sincronización: sube o que cambiou aquí, baixa o que cambiou noutros dispositivos e as fotos
 X.sync = (() => {
-  const st = { estado: 'local', msg: '', ultima: null };
+  const st = { estado: 'local', msg: '', ultima: null, progreso: null };
   let timer = null, enCurso = false, repetir = false;
 
-  function set(estado, msg = '') {
+  function set(estado, msg = '', progreso = null) {
     st.estado = estado;
     st.msg = msg;
+    st.progreso = progreso;
     if (estado === 'ok') st.ultima = new Date();
     if (X.app && X.app.renderSync) X.app.renderSync();
   }
@@ -168,12 +174,13 @@ X.sync = (() => {
     try {
       await X.nube.subir(X.datos.cambiosPendentes());
       await X.nube.baixar();
-      await X.fotos.subirPendentes();
+      await X.fotos.subirPendentes((n, tot) => set('sincronizando', X.t('subindoFotos', { n, tot }), `${n}/${tot}`));
       if (X.datos.nPendentes()) repetir = true;
       set('ok');
     } catch (e) {
       console.error(e);
       set(navigator.onLine === false ? 'pendente' : 'erro', e.message);
+      timer = setTimeout(executar, 30000); // reintento
     } finally {
       enCurso = false;
       if (repetir) { repetir = false; programar(); }
