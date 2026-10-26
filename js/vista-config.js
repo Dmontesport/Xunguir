@@ -91,7 +91,7 @@ X.vConfig = (() => {
         <p class="nota">${t('copiaAxuda')}</p>
         <div class="botons">
           <button class="btn" data-accion="exportar">${ui.ic('download')}<span>${t('exportar')}</span></button>
-          <label class="btn">${ui.ic('upload')}<span>${t('importar')}</span><input type="file" accept="application/json,.json" data-cambio="importar" hidden></label>
+          <label class="btn">${ui.ic('upload')}<span>${t('importar')}</span><input type="file" data-cambio="importar" hidden></label>
         </div>
       </section>
 
@@ -202,10 +202,13 @@ X.vConfig = (() => {
 
   X.cambios.importar = async el => {
     const fx = el.files && el.files[0];
-    el.value = '';
     if (!fx) return;
+    ui.toast(t('lendoCopia'));
     try {
-      const copia = JSON.parse(await fx.text());
+      const texto = await fx.text();
+      el.value = '';
+      let copia = null;
+      try { copia = JSON.parse(texto); } catch { /* non é JSON */ }
       if (!copia || !copia.datos || !Array.isArray(copia.datos.animais)) throw new Error(t('copiaNonValida'));
       if (!await ui.confirmar(t('confImportar', { n: copia.datos.animais.filter(a => !a.del).length }), { aceptar: t('importar') })) return;
       await X.fotos.importar(copia.fotos);
@@ -213,7 +216,7 @@ X.vConfig = (() => {
       D.marcarTodoPendente();
       X.sync.programar(500);
       ui.toast(t('importado'), 'ok');
-    } catch (e) { ui.toast(e.message, 'erro'); }
+    } catch (e) { el.value = ''; ui.toast(e.message, 'erro'); }
   };
 
   // ---------- Especies ----------
