@@ -47,8 +47,29 @@ X.app = (() => {
       ${av.length ? `<div class="panel-lista">${av.map(ui.botonAviso).join('')}</div>` : `<p class="todo-ben">${ui.ic('check')} ${t('todoEnOrde')}</p>`}`;
   }
 
+  // Mentres está aberto o selector de ficheiros (importar copia, foto…) non se redebuxa:
+  // ao volver á app redebuxaríase e o ficheiro chegaría a un campo que xa non está na pantalla.
+  let ficheiroAberto = false, renderPendente = false, temporizadorFicheiro = null;
+  function pecharFicheiro() {
+    clearTimeout(temporizadorFicheiro);
+    if (!ficheiroAberto) return;
+    ficheiroAberto = false;
+    if (renderPendente) { renderPendente = false; setTimeout(render, 0); }
+  }
+  document.addEventListener('click', e => {
+    if (e.target.matches && e.target.matches('input[type=file]')) ficheiroAberto = true;
+  }, true);
+  document.addEventListener('change', e => { if (e.target.type === 'file') setTimeout(pecharFicheiro, 0); }, true);
+  document.addEventListener('cancel', e => { if (e.target.type === 'file') pecharFicheiro(); }, true);
+  // Se o navegador non avisa ao cancelar, libérase un tempo despois de volver á app
+  // (xeneroso: se o ficheiro está en Drive, o móbil descárgao antes de entregalo)
+  window.addEventListener('focus', () => {
+    if (ficheiroAberto) { clearTimeout(temporizadorFicheiro); temporizadorFicheiro = setTimeout(pecharFicheiro, 20000); }
+  });
+
   function render() {
     if (!listo) return;
+    if (ficheiroAberto) { renderPendente = true; return; }
     // Conservar o foco (p. ex. no buscador) entre renderizados
     const act = document.activeElement, idFoco = act && act.id && $('#vista').contains(act) ? act.id : null;
     const sel = idFoco && act.selectionStart != null ? [act.selectionStart, act.selectionEnd] : null;

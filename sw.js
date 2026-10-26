@@ -1,7 +1,7 @@
 'use strict';
 // Service worker: garda os ficheiros da app para que abra sen conexión.
 // Os datos van por outro camiño (dispositivo + Supabase), non se cachean aquí.
-const CACHE = 'xunguir-2.0.2';
+const CACHE = 'xunguir-2.0.3';
 const FICHEIROS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilos.css',
   'js/i18n.js', 'js/config.js', 'js/util.js', 'js/datos.js', 'js/calculos.js', 'js/vendor/supabase.js',
