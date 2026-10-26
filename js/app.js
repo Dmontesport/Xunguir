@@ -161,7 +161,17 @@ X.app = (() => {
       }
     } catch { /* sen conexión */ }
   }
-  X.accions.actualizar = () => location.reload();
+  // Actualizar: novo service worker e caché do modo sen conexión baleira (os datos non se tocan),
+  // e recargar. index.html pide cada ficheiro con ?v=versión, así que non se usan copias vellas.
+  X.accions.actualizar = async el => {
+    el.disabled = true;
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update();
+    } catch { /* sen service worker */ }
+    try { for (const k of await caches.keys()) await caches.delete(k); } catch { /* sen caché */ }
+    location.reload();
+  };
 
   async function iniciar() {
     X.lang = localStorage.getItem('xunguir.lingua') || 'gl';

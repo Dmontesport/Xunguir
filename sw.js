@@ -1,7 +1,7 @@
 'use strict';
 // Service worker: garda os ficheiros da app para que abra sen conexión.
-// Os datos van por outro camiño (localStorage + API de GitHub), non se cachean aquí.
-const CACHE = 'xunguir-v5';
+// Os datos van por outro camiño (dispositivo + Supabase), non se cachean aquí.
+const CACHE = 'xunguir-2.0.2';
 const FICHEIROS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilos.css',
   'js/i18n.js', 'js/config.js', 'js/util.js', 'js/datos.js', 'js/calculos.js', 'js/vendor/supabase.js',
@@ -10,7 +10,8 @@ const FICHEIROS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHEIROS)).then(() => self.skipWaiting()));
+  // cache: 'reload' → descarga do servidor, non da caché do navegador
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHEIROS.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -19,12 +20,14 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
-// Primeiro a rede (para ter sempre a última versión) e, se non hai, a caché
+// Primeiro a rede (para ter sempre a última versión) e, se non hai, a caché.
+// 'no-cache' fai que o navegador pregunte sempre ao servidor se o ficheiro cambiou
+// (GitHub Pages deixa gardar os ficheiros 10 minutos e as actualizacións tardarían en chegar).
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(new Request(e.request, { cache: 'no-cache' }))
       .then(r => { const copia = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); return r; })
       .catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
