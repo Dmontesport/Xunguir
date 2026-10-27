@@ -356,7 +356,8 @@ X.vMercado = (() => {
     for (const [i, fo] of fotosForm.entries()) {
       if (fo.ruta) { fotos.push(fo.ruta); continue; }
       const ruta = `${uid}/${id}/${Date.now().toString(36)}-${i}.jpg`;
-      const { error } = await X.nube.limite(sb().storage.from('mercado').upload(ruta, new Blob([fo.blob], { type: 'image/jpeg' }), { contentType: 'image/jpeg', upsert: true }), 60000);
+      // Cada foto ten un nome único: súbese como ficheiro novo (sen "upsert", que require máis permisos)
+      const { error } = await X.nube.limite(sb().storage.from('mercado').upload(ruta, new Blob([fo.blob], { type: 'image/jpeg' }), { contentType: 'image/jpeg' }), 60000);
       if (error) throw error;
       fotos.push(ruta);
     }
