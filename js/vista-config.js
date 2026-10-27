@@ -38,6 +38,11 @@ X.vConfig = (() => {
           <label><input type="radio" name="lingua" value="gl" ${X.lang === 'gl' ? 'checked' : ''} data-cambio="lingua"><span>Galego</span></label>
           <label><input type="radio" name="lingua" value="es" ${X.lang === 'es' ? 'checked' : ''} data-cambio="lingua"><span>Castellano</span></label>
         </div>
+        <h2 class="subtitulo-config">${t('tema')}</h2>
+        <div class="segmentado">
+          ${[['auto', '🌗', 'temaAuto'], ['claro', '☀️', 'temaClaro'], ['escuro', '🌙', 'temaEscuro']].map(([v, ic, k]) =>
+            `<label><input type="radio" name="tema" value="${v}" ${temaActual() === v ? 'checked' : ''} data-cambio="tema"><span>${ic} ${t(k)}</span></label>`).join('')}
+        </div>
       </section>
 
       <form class="tarxeta-config" data-form="avisos">
@@ -112,6 +117,14 @@ X.vConfig = (() => {
   }
 
   // ---------- Manexadores ----------
+  // Tema: automático (segue ao móbil), claro ou escuro. Gárdase en cada dispositivo.
+  const temaActual = () => { try { return localStorage.getItem('xunguir.tema') || 'auto'; } catch { return 'auto'; } };
+  X.cambios.tema = el => {
+    try { if (el.value === 'auto') localStorage.removeItem('xunguir.tema'); else localStorage.setItem('xunguir.tema', el.value); } catch { /* sen almacenamento */ }
+    if (el.value === 'auto') delete document.documentElement.dataset.tema;
+    else document.documentElement.dataset.tema = el.value;
+  };
+
   X.cambios.lingua = el => {
     X.lang = el.value;
     localStorage.setItem('xunguir.lingua', X.lang);

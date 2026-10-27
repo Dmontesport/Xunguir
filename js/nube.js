@@ -73,6 +73,10 @@ X.nube = (() => {
     const uid = sesion.user.id;
     const { data: lista } = await sb.storage.from('fotos').list(`${uid}/fotos`, { limit: 1000 });
     if (lista && lista.length) await sb.storage.from('fotos').remove(lista.map(f => `${uid}/fotos/${f.name}`));
+    // e as fotos dos seus anuncios do mercado
+    const { data: anuncios } = await sb.from('anuncios').select('fotos').eq('vendedor', uid);
+    const fotosMercado = (anuncios || []).flatMap(a => a.fotos || []);
+    if (fotosMercado.length) await sb.storage.from('mercado').remove(fotosMercado);
     const { error } = await sb.rpc('borrar_conta');
     if (error) throw error;
     await sair();
@@ -143,7 +147,7 @@ X.nube = (() => {
 
   return {
     iniciar, entrar, sair, recuperar, cambiarContrasinal, borrarConta, aceptacions, aceptar,
-    subir, baixar, subirFoto, baixarFoto, borrarFoto, uidSenConexion,
+    subir, baixar, subirFoto, baixarFoto, borrarFoto, uidSenConexion, limite, cliente: () => sb,
     enlace, entorno: cfg.nome,
     sesion: () => sesion, uid: () => sesion && sesion.user.id, correo: () => sesion && sesion.user.email,
   };

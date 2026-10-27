@@ -141,5 +141,5 @@ X.fotos = (() => {
     await new Promise(res => { const r = indexedDB.deleteDatabase('xunguir'); r.onsuccess = r.onerror = r.onblocked = () => res(); });
   }
 
-  return { engadir, subirPendentes, marcarPendente, borrar, traerDeGitHub, url, src, hidratar, exportar, importar, borrarTodo };
+  return { comprimir, engadir, subirPendentes, marcarPendente, borrar, traerDeGitHub, url, src, hidratar, exportar, importar, borrarTodo };
 })();

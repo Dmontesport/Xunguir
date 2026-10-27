@@ -5,7 +5,7 @@ X.app = (() => {
   const u = X.u, ui = X.ui;
   const t = (...a) => X.t(...a);
   const $ = s => document.querySelector(s);
-  const VISTAS = { animais: () => X.vAnimais, parcelas: () => X.vParcelas, config: () => X.vConfig };
+  const VISTAS = { animais: () => X.vAnimais, parcelas: () => X.vParcelas, mercado: () => X.vMercado, config: () => X.vConfig };
   let vista = 'animais', listo = false;
 
   function cabeceira() {
@@ -14,10 +14,13 @@ X.app = (() => {
     const ins = n => n ? `<span class="insignia">${n}</span>` : '';
     $('#barra').innerHTML = `
       <a class="marca" href="#animais">${ui.logo()}<span>Xunguir</span></a>
-      <nav class="pestanas">
-        <a href="#animais" class="${vista === 'animais' ? 'activa' : ''}">${t('animais')}${ins(nAn)}</a>
-        <a href="#parcelas" class="${vista === 'parcelas' ? 'activa' : ''}">${t('parcelas')}${ins(nPa)}</a>
-      </nav>
+      <div class="navegacion">
+        <nav class="pestanas">
+          <a href="#animais" class="${vista === 'animais' ? 'activa' : ''}">${t('animais')}${ins(nAn)}</a>
+          <a href="#parcelas" class="${vista === 'parcelas' ? 'activa' : ''}">${t('parcelas')}${ins(nPa)}</a>
+        </nav>
+        <a href="#mercado" class="boton-mercado ${vista === 'mercado' ? 'activa' : ''}">🏪 <span>${t('mercado')}</span></a>
+      </div>
       <div class="accions">
         <button class="btn-icono" id="btnSync" data-accion="sync"></button>
         <button class="btn-icono" id="btnAvisos" data-accion="avisos" aria-label="${t('avisos')}" title="${t('avisos')}">${ui.ic('bell')}${ins(av.length)}</button>
@@ -91,6 +94,8 @@ X.app = (() => {
     const nova = VISTAS[h] ? h : 'animais';
     if (nova !== vista) window.scrollTo(0, 0);
     vista = nova;
+    // O Mercado leva o seu propio color, para que se note que non é a xestión da explotación
+    document.body.classList.toggle('modo-mercado', vista === 'mercado');
     $('#panelAvisos').hidden = true;
     render();
   }
@@ -158,6 +163,28 @@ X.app = (() => {
     const modal = $('#modal');
     modal.addEventListener('click', e => { if (e.target === modal) ui.modal.pechar(); });
     modal.addEventListener('close', () => { ui.modal.limpar(); ui.modal.vista = null; ui.modal.volver = null; });
+
+    // Deslizar co dedo entre Animais e Parcelas (só esas dúas pestanas)
+    const PESTANAS_DESLIZAR = ['animais', 'parcelas'];
+    let toque = null;
+    $('#vista').addEventListener('touchstart', e => {
+      const t0 = e.touches[0];
+      // Non cando hai máis dun dedo, nin en zonas que xa se desprazan de lado ou en campos de texto
+      if (e.touches.length !== 1 || !PESTANAS_DESLIZAR.includes(vista)
+        || e.target.closest('.filtros, .tira-avisos, .taboa-scroll, .alpacas, input, textarea, select')) { toque = null; return; }
+      toque = { x: t0.clientX, y: t0.clientY, t: Date.now() };
+    }, { passive: true });
+    $('#vista').addEventListener('touchend', e => {
+      if (!toque || document.body.classList.contains('modo-arrastre') || $('#modal').open) { toque = null; return; }
+      const t1 = e.changedTouches[0], dx = t1.clientX - toque.x, dy = t1.clientY - toque.y, ms = Date.now() - toque.t;
+      toque = null;
+      if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2 || ms > 700) return;
+      const i = PESTANAS_DESLIZAR.indexOf(vista), seguinte = PESTANAS_DESLIZAR[i + (dx < 0 ? 1 : -1)];
+      if (!seguinte) return;
+      $('#vista').dataset.entrada = dx < 0 ? 'dereita' : 'esquerda';
+      location.hash = '#' + seguinte;
+    }, { passive: true });
+    $('#vista').addEventListener('animationend', () => { delete $('#vista').dataset.entrada; });
 
     window.addEventListener('hashchange', navegar);
     window.addEventListener('online', () => X.sync.executar());

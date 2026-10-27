@@ -3,7 +3,7 @@
 // Textos legais (borradores para revisar por un profesional) e a súa aceptación.
 // Ao cambiar algún texto de forma importante, subir VERSION: pedirase aceptalo de novo.
 X.legal = (() => {
-  const VERSION = '2026-10-26';
+  const VERSION = '2026-10-27'; // engádese o Mercado
   const ACEPTAR = ['termos', 'privacidade'];
   const T = () => X.TITULAR;
   const e = s => X.u.esc(s);
@@ -29,7 +29,9 @@ X.legal = (() => {
           <li><b>Datos de la cuenta:</b> correo electrónico y contraseña (la contraseña se guarda cifrada y nunca es visible).</li>
           <li><b>Datos de la explotación</b> que tú introduces: animales (identificación, raza, fechas, pesos, reproducción, fotos), parcelas, grupos, almacén, ventas (incluido el nombre del comprador si lo anotas) y notas.</li>
           <li><b>Datos técnicos</b> necesarios para el funcionamiento (fecha de las modificaciones, aceptación de estos textos).</li>
+          <li><b>Anuncios del Mercado</b> que publiques: datos del animal, fotos, provincia y municipio, el teléfono de contacto y el nombre que decidas mostrar. Estos datos <b>son visibles para el resto de usuarios</b> mientras el anuncio esté activo. Las denuncias de anuncios guardan quién las envía y el motivo.</li>
         </ul>
+        <p>Para ordenar los anuncios por cercanía, la posición aproximada de tu dispositivo se usa solo en él y no se envía al servidor. La posición del anuncio se calcula a partir del municipio (servicio de OpenStreetMap), nunca de la dirección de la explotación.</p>
         <p>Xunguir <b>no solicita ni guarda el DNI/NIF</b> del titular de la explotación. Al leer el DIB solo se toman el número del animal, su fecha de nacimiento, el sexo y la raza.</p>
         <h4>Para qué y con qué base</h4>
         <ul>
@@ -66,13 +68,20 @@ X.legal = (() => {
           <li>La lectura de códigos (DIB, crotales) puede contener errores: revisa siempre los datos antes de guardarlos.</li>
           <li>El servicio se ofrece «tal cual», sin garantía de disponibilidad continua ni ausencia de errores. En la medida permitida por la ley, el prestador no responde de daños derivados de decisiones tomadas a partir de la información de la aplicación, de interrupciones del servicio o de la pérdida de datos no imputable a dolo o culpa grave.</li>
         </ul>
-        <h4>6. Encargo de tratamiento (art. 28 RGPD)</h4>
+        <h4>6. Mercado</h4>
+        <ul>
+          <li>El Mercado es un tablón de anuncios entre usuarios. El prestador <b>no compra, vende ni intermedia</b> en las operaciones, no cobra comisiones ni garantiza el estado de los animales, la veracidad de los anuncios ni el buen fin de los tratos.</li>
+          <li>Quien publica es el único responsable de su anuncio: que los datos sean ciertos, que tenga derecho a vender el animal y que la venta y el traslado cumplan la normativa (identificación y DIB, guía de traslado, requisitos sanitarios, bienestar animal y fiscalidad).</li>
+          <li>No se permiten anuncios de animales o productos cuya venta esté prohibida, ni contenidos engañosos, ofensivos o ajenos a la ganadería. El prestador puede ocultar o eliminar anuncios que incumplan estas normas o hayan sido denunciados, y suspender el acceso de quien las incumpla.</li>
+          <li>Los anuncios caducan a los 60 días si no se reactivan. Algunas funciones de visibilidad podrán ser de pago («destacados» o similares) en el futuro, informando antes de sus condiciones.</li>
+        </ul>
+        <h4>7. Encargo de tratamiento (art. 28 RGPD)</h4>
         <p>Respecto a los datos personales que incluyas en tu explotación, tú eres el responsable y el prestador el encargado del tratamiento, que se compromete a: tratarlos solo para prestar el servicio y según tus instrucciones; garantizar la confidencialidad de las personas autorizadas; aplicar medidas de seguridad adecuadas (acceso cifrado, aislamiento de cada cuenta, copias del proveedor); recurrir solo a subencargados con garantías (actualmente Supabase, en la UE); ayudarte a atender los derechos de los interesados; notificarte sin dilación las violaciones de seguridad que te afecten; y suprimir los datos al terminar el servicio, salvo obligación legal de conservarlos.</p>
-        <h4>7. Baja</h4>
-        <p>Puedes dejar de usar la aplicación y borrar tu cuenta en cualquier momento desde Configuración → Mi cuenta.</p>
-        <h4>8. Cambios en estos términos</h4>
+        <h4>8. Baja</h4>
+        <p>Puedes dejar de usar la aplicación y borrar tu cuenta en cualquier momento desde Configuración → Mi cuenta. Al hacerlo se borran también tus anuncios.</p>
+        <h4>9. Cambios en estos términos</h4>
         <p>Si se modifican de forma relevante, se te pedirá aceptarlos de nuevo al entrar.</p>
-        <h4>9. Ley aplicable</h4>
+        <h4>10. Ley aplicable</h4>
         <p>Estos términos se rigen por la legislación española. Para cualquier controversia serán competentes los juzgados y tribunales que correspondan conforme a la ley.</p>`,
     },
   };
