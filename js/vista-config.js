@@ -110,6 +110,12 @@ X.vConfig = (() => {
       </section>
 
       <section class="tarxeta-config">
+        <h2>${t('novidades')}</h2>
+        <p class="nota">${t('notaNovidades', { v: X.VERSION })}</p>
+        <div class="botons"><button class="btn" data-accion="ver-novidades">🆕 <span>${t('verNovidades')}</span></button></div>
+      </section>
+
+      <section class="tarxeta-config">
         <h2>${t('legal')}</h2>
         <div class="botons">
           ${['termos', 'privacidade', 'aviso'].map(d => `<button class="btn" data-accion="ver-legal" data-doc="${d}">${t('legal_' + d)}</button>`).join('')}

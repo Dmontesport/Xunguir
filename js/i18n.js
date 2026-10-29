@@ -145,6 +145,9 @@ X.i18n = {
     axudaGranxeiro: 'Levo a miña explotación: animais e parcelas', axudaTratante: 'Compro e vendo gando: empezo no Mercado',
     notaPerfil: 'Decide a pestana coa que se abre Xunguir: os granxeiros en Animais e os tratantes no Mercado. As demais pestanas seguen dispoñibles.',
     perfilSenSubir: 'Gardado neste dispositivo; subirase á conta cando haxa conexión',
+    // Novidades
+    novidades: 'Novidades', novidadesVersion: 'Novidades da versión {v}', versionData: 'Versión {v} · {data}', entendido: 'Entendido',
+    verNovidades: 'Ver novidades', notaNovidades: 'Tes a versión {v}. Aquí podes volver ler o que cambiou en cada actualización.',
     aConvir: 'A convir', oLote: 'o lote', animal: 'animal', mixto: 'Mixto', destacado: 'Destacado',
     estadoAnuncio_activo: 'Activo', estadoAnuncio_vendido: 'Vendido', estadoAnuncio_retirado: 'Retirado', estadoAnuncio_oculto: 'Ocultado pola administración',
     aKm: 'a {km} km', ataMeses: 'ata {n} meses', tentarDeNovo: 'Tentar de novo', cargandoAnuncios: 'Cargando anuncios…', cargarMais: 'Cargar máis',
@@ -376,6 +379,9 @@ X.i18n = {
     axudaGranxeiro: 'Llevo mi explotación: animales y parcelas', axudaTratante: 'Compro y vendo ganado: empiezo en el Mercado',
     notaPerfil: 'Decide la pestaña con la que se abre Xunguir: los granjeros en Animales y los tratantes en el Mercado. Las demás pestañas siguen disponibles.',
     perfilSenSubir: 'Guardado en este dispositivo; se subirá a la cuenta cuando haya conexión',
+    // Novidades
+    novidades: 'Novedades', novidadesVersion: 'Novedades de la versión {v}', versionData: 'Versión {v} · {data}', entendido: 'Entendido',
+    verNovidades: 'Ver novedades', notaNovidades: 'Tienes la versión {v}. Aquí puedes volver a leer lo que cambió en cada actualización.',
     aConvir: 'A convenir', oLote: 'el lote', animal: 'animal', mixto: 'Mixto', destacado: 'Destacado',
     estadoAnuncio_activo: 'Activo', estadoAnuncio_vendido: 'Vendido', estadoAnuncio_retirado: 'Retirado', estadoAnuncio_oculto: 'Ocultado por la administración',
     aKm: 'a {km} km', ataMeses: 'hasta {n} meses', tentarDeNovo: 'Intentar de nuevo', cargandoAnuncios: 'Cargando anuncios…', cargarMais: 'Cargar más',

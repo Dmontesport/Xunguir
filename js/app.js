@@ -257,6 +257,7 @@ X.app = (() => {
     navegar();
     X.sync.executar();
     await X.acceso.migrar();
+    X.novidades.comprobar();
 
     comprobarVersion();
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') comprobarVersion(); });

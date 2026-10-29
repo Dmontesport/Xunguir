@@ -34,9 +34,11 @@ X.nube = (() => {
     } catch { sesion = null; }
     sb.auth.onAuthStateChange((evento, s) => { sesion = s; });
     if (sesion) localStorage.setItem(CLAVE_UID, sesion.user.id);
-    // Perfil escollido sen conexión: súbese agora á conta
-    const perfilLocal = sesion && !(sesion.user.user_metadata || {}).perfil && localStorage.getItem(clavePerfil());
-    if (perfilLocal) gardarPerfil(perfilLocal).catch(() => { /* xa se subirá */ });
+    // Preferencias gardadas sen conexión: súbense agora á conta
+    for (const k of PREFERENCIAS) {
+      const local = sesion && !(sesion.user.user_metadata || {})[k] && localStorage.getItem(claveLocal(k));
+      if (local) gardarPreferencia(k, local).catch(() => { /* xa se subirá */ });
+    }
     // Limpa os restos da ligazón (tokens ou erros) da barra de enderezos
     if (location.hash.includes('access_token') || location.hash.includes('error')) history.replaceState(null, '', location.pathname + location.search);
     return sesion;
@@ -71,23 +73,27 @@ X.nube = (() => {
     if (error) throw error;
   }
 
-  // ---------- Perfil: 'granxeiro' ou 'tratante' ----------
-  // Vai na conta (datos do usuario en Supabase), así é o mesmo en todos os dispositivos.
-  // Cópiase tamén aquí para saber cal é sen conexión.
-  const clavePerfil = () => `xunguir.perfil.${(sesion && sesion.user.id) || uidSenConexion()}`;
-  function perfil() {
-    const daConta = sesion && sesion.user.user_metadata && sesion.user.user_metadata.perfil;
-    if (daConta) { localStorage.setItem(clavePerfil(), daConta); return daConta; }
-    return localStorage.getItem(clavePerfil());
+  // ---------- Preferencias da conta ----------
+  // 'perfil' (granxeiro/tratante) e 'novidades' (última versión da que se viron as novidades).
+  // Van na conta (datos do usuario en Supabase), así son as mesmas en todos os dispositivos.
+  // Cópianse tamén aquí para coñecelas sen conexión.
+  const PREFERENCIAS = ['perfil', 'novidades'];
+  const claveLocal = k => `xunguir.${k}.${(sesion && sesion.user.id) || uidSenConexion()}`;
+  function preferencia(k) {
+    const daConta = sesion && sesion.user.user_metadata && sesion.user.user_metadata[k];
+    if (daConta) { localStorage.setItem(claveLocal(k), daConta); return daConta; }
+    return localStorage.getItem(claveLocal(k));
   }
 
-  async function gardarPerfil(valor) {
-    localStorage.setItem(clavePerfil(), valor);
+  async function gardarPreferencia(k, valor) {
+    localStorage.setItem(claveLocal(k), valor);
     if (!sesion) return;
-    const { data, error } = await limite(sb.auth.updateUser({ data: { perfil: valor } }));
+    const { data, error } = await limite(sb.auth.updateUser({ data: { [k]: valor } }));
     if (error) throw error;
     if (data && data.user) sesion = { ...sesion, user: data.user };
   }
+  const perfil = () => preferencia('perfil');
+  const gardarPerfil = valor => gardarPreferencia('perfil', valor);
 
   async function borrarConta() {
     // Primeiro as fotos (o almacenamento non se borra en cascada) e logo a conta
@@ -167,7 +173,7 @@ X.nube = (() => {
   }
 
   return {
-    iniciar, entrar, sair, recuperar, cambiarContrasinal, borrarConta, aceptacions, aceptar, perfil, gardarPerfil,
+    iniciar, entrar, sair, recuperar, cambiarContrasinal, borrarConta, aceptacions, aceptar, perfil, gardarPerfil, preferencia, gardarPreferencia,
     subir, baixar, subirFoto, baixarFoto, borrarFoto, uidSenConexion, limite, cliente: () => sb,
     enlace, entorno: cfg.nome,
     sesion: () => sesion, uid: () => sesion && sesion.user.id, correo: () => sesion && sesion.user.email,
