@@ -10,6 +10,21 @@ X.novidades = (() => {
   // [icona, título, texto]
   const LISTA = [
     {
+      version: '2.4.0', data: '2026-10-29',
+      gl: [
+        ['🏚️', 'Vende o teu almacén no Mercado', 'Agora tamén podes anunciar alpacas, rolos, microsilos, silo e sacos. Arriba do Mercado escolle «Todo», «Animais» ou «Almacén».'],
+        ['📦', 'Desde un lote', 'Ao publicar, podes partir dun lote do teu almacén e cóllense o tipo, o contido e o que queda. Cando o marques como vendido, pregúntache se o queres quitar do almacén.'],
+        ['🌍', 'Todo no teu idioma', 'Os nomes das especies (Vacún/Vacuno, Galiñas/Gallinas…) cambian agora co idioma, salvo as que renomeases ti.'],
+        ['🏳️', 'Bandeiras', 'Ao escoller o idioma aparecen as bandeiras de Galicia e de España para que sexa máis claro.'],
+      ],
+      es: [
+        ['🏚️', 'Vende tu almacén en el Mercado', 'Ahora también puedes anunciar alpacas, rollos, microsilos, silo y sacos. Arriba del Mercado elige «Todo», «Animales» o «Almacén».'],
+        ['📦', 'Desde un lote', 'Al publicar, puedes partir de un lote de tu almacén y se cogen el tipo, el contenido y lo que queda. Cuando lo marques como vendido, te pregunta si quieres quitarlo del almacén.'],
+        ['🌍', 'Todo en tu idioma', 'Los nombres de las especies (Vacún/Vacuno, Galiñas/Gallinas…) cambian ahora con el idioma, salvo las que hayas renombrado tú.'],
+        ['🏳️', 'Banderas', 'Al elegir el idioma aparecen las banderas de Galicia y de España para que sea más claro.'],
+      ],
+    },
+    {
       version: '2.3.0', data: '2026-10-29',
       gl: [
         ['🔁', 'Gasto diario do almacén', 'Na ficha de cada pasto podes indicar o que gasta cada día do almacén (p. ex. 3 alpacas de «Herba 2025»). Descóntase só, conta como comida da parcela e avisa antes de que se esgote.'],
@@ -70,10 +85,10 @@ X.novidades = (() => {
     let lista;
     if (vista) lista = publicadas().filter(n => comparar(n.version, vista) > 0);
     else {
-      // Primeira vez con este aviso: a quen xa usaba a app amósaselle só a última versión
+      // Primeira vez con este aviso: quen xa usaba a app vén dunha versión anterior á 2.3.0 → todas
       const nova = await contaNova();
       if (nova === null) return;
-      lista = nova ? [] : publicadas().slice(0, 1);
+      lista = nova ? [] : publicadas();
     }
     // Se mentres tanto abriu algo, non se lle interrompe: amósanse a próxima vez
     if (lista.length && document.getElementById('modal').open) return;

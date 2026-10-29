@@ -44,8 +44,8 @@ X.vConfig = (() => {
       <section class="tarxeta-config">
         <h2>${t('idioma')}</h2>
         <div class="segmentado">
-          <label><input type="radio" name="lingua" value="gl" ${X.lang === 'gl' ? 'checked' : ''} data-cambio="lingua"><span>Galego</span></label>
-          <label><input type="radio" name="lingua" value="es" ${X.lang === 'es' ? 'checked' : ''} data-cambio="lingua"><span>Castellano</span></label>
+          <label><input type="radio" name="lingua" value="gl" ${X.lang === 'gl' ? 'checked' : ''} data-cambio="lingua"><span>${ui.bandeira('gl')} Galego</span></label>
+          <label><input type="radio" name="lingua" value="es" ${X.lang === 'es' ? 'checked' : ''} data-cambio="lingua"><span>${ui.bandeira('es')} Castellano</span></label>
         </div>
         <h2 class="subtitulo-config">${t('tema')}</h2>
         <div class="segmentado">
@@ -83,7 +83,7 @@ X.vConfig = (() => {
         <div class="taboa-scroll"><table class="taboa">
           <thead><tr><th></th><th>${t('nome')}</th><th>${t('codigoDib')}</th><th>${t('ciclo')}</th><th>${t('xestacion')}</th><th>${t('pesoAdulto')} ♀/♂</th><th>${t('animais')}</th><th></th></tr></thead>
           <tbody>${especies.map(e => `<tr>
-            <td class="ico">${e.icono} ${X.calc.icono({ especieId: e.id, sexo: 'M' })}</td><td>${u.esc(e.nome)}</td>
+            <td class="ico">${e.icono} ${X.calc.icono({ especieId: e.id, sexo: 'M' })}</td><td>${u.esc(D.nomeEspecie(e))}</td>
             <td title="${u.esc(t('dib' + X.razas.codigoEspecie(e)))}"><span class="crotal">${X.razas.codigoEspecie(e)}</span></td><td>${e.ciclo} d</td><td>${e.xestacion} d</td>
             <td>${u.numero(e.pesoAdultoF, 0)} / ${u.numero(e.pesoAdultoM, 0)} kg</td><td>${usos(e.id)}</td>
             <td><button class="btn-icono peq" data-accion="editar-especie" data-id="${e.id}" aria-label="${t('editar')}">${ui.ic('edit')}</button></td></tr>`).join('')}</tbody>
@@ -266,9 +266,9 @@ X.vConfig = (() => {
     e = e || { ...D.PRESETS[0], id: '', nome: '', icono: '🐾' };
     const usos = e.id ? D.lista('animais').filter(a => a.especieId === e.id).length : 0;
     ui.modal.abrir(`<form data-form="especie" data-id="${e.id}" class="modal-form">
-      ${ui.cab(novo ? t('novaEspecie') : u.esc(e.nome))}
+      ${ui.cab(novo ? t('novaEspecie') : u.esc(D.nomeEspecie(e)))}
       <div class="modal-corpo"><div class="grella-campos">
-        ${ui.campo(t('nome') + ' *', ui.entrada('nome', e.nome, 'required'))}
+        ${ui.campo(t('nome') + ' *', ui.entrada('nome', D.nomeEspecie(e), 'required'))}
         ${ui.campo(t('iconoFemia'), ui.entrada('icono', e.icono, 'maxlength="4"'), t('axIcono'))}
         ${ui.campo(t('iconoMacho'), ui.entrada('iconoM', e.id ? X.calc.icono({ especieId: e.id, sexo: 'M' }) : e.iconoM, 'maxlength="4"'), t('axIcono'))}
         ${ui.campo(t('codigoDib'), ui.selector('codigoDib', X.razas.CODIGOS_ESPECIE.map(k => [k, `${k} · ${t('dib' + k)}`]), e.id ? X.razas.codigoEspecie(e) : '06'), t('axCodigoDib'))}

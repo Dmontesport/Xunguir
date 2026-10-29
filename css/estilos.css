@@ -574,6 +574,13 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .acceso-marca h1 { flex: 1; font-size: 1.6rem; }
 .acceso-caixa h2 { font-size: 1.2rem; }
 .acceso-form { display: flex; flex-direction: column; gap: 12px; }
+/* Novidades da versión */
+.novidades-version { margin: 14px 0 4px; color: var(--texto-2); font-size: .9rem; }
+.novidades section:first-child .novidades-version { margin-top: 0; }
+.lista-novidades { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.lista-novidades li { display: flex; gap: 12px; align-items: flex-start; }
+.novidade-ic { font-size: 1.6rem; line-height: 1.2; flex: none; width: 2rem; text-align: center; }
+.lista-novidades p { margin: 2px 0 0; color: var(--texto-2); font-size: .92rem; }
 /* Primeira vez: granxeiro ou tratante */
 .opcions-perfil { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .opcion-perfil {
@@ -589,9 +596,15 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .acceso-erro { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--vermello-suave); color: var(--vermello); font-weight: 600; }
 .acceso-lista { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--texto-2); }
 .acceso-ligazons { margin: 0; text-align: center; }
-.acceso-lingua { text-align: center; color: var(--texto-2); font-size: .85rem; }
-.acceso-lingua .enlace { color: var(--texto-2); font-weight: 500; }
-.acceso-lingua .enlace.activa { color: var(--primario); font-weight: 700; }
+.acceso-lingua { display: flex; justify-content: center; gap: 10px; color: var(--texto-2); font-size: .9rem; }
+.acceso-lingua .enlace {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 99px; border: 1.5px solid transparent;
+  color: var(--texto-2); font-weight: 500; text-decoration: none;
+}
+.acceso-lingua .enlace.activa { color: var(--primario); font-weight: 700; border-color: var(--primario); }
+/* Bandeiras dos idiomas */
+.bandeira { width: 24px; height: 16px; flex: none; vertical-align: -3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); border-radius: 2.5px; }
+.acceso-lingua .bandeira { width: 27px; height: 18px; }
 .conta-correo { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
 
 /* Aviso de versión nova */
@@ -651,6 +664,13 @@ body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); 
 .carrusel img { flex: 0 0 100%; width: 100%; min-width: 0; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
 .carrusel-conta { position: absolute; right: 10px; bottom: 10px; padding: 2px 9px; border-radius: 99px; font-size: .78rem; background: rgba(0, 0, 0, .55); color: #fff; pointer-events: none; }
 .ficha-anuncio .anuncio-foto.grande { max-height: 55vh; }
+/* Anuncios do almacén sen foto: a icona da unidade, grande */
+.ph-almacen { display: flex; align-items: center; justify-content: center; }
+.ph-almacen .unidade { transform: scale(3.2); }
+.anuncio-foto.grande .ph-almacen .unidade { transform: scale(5); }
+.tarxeta-anuncio .sub .unidade { vertical-align: -2px; }
+.categorias-mercado { margin-bottom: 10px; }
+.form-anuncio .categorias-mercado { margin-bottom: 14px; }
 .contacto { margin-top: 14px; }
 .contacto .btn { flex: 1; min-height: 46px; font-size: 1rem; text-decoration: none; }
 .btn.whatsapp { background: #25d366; border-color: #25d366; color: #fff; }

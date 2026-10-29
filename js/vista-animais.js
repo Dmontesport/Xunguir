@@ -47,7 +47,7 @@ X.vAnimais = (() => {
       </div>
       <div class="info">
         ${a.crotal ? `<div class="crotal-fila"><span class="crotal">${u.esc(a.crotal)}</span></div>` : ''}
-        <div class="sub">${c.icono(a)} ${u.esc(a.raza || e.nome)}${idade ? ` · ${idade}` : ''}</div>
+        <div class="sub">${c.icono(a)} ${u.esc(a.raza || D.nomeEspecie(e))}${idade ? ` · ${idade}` : ''}</div>
         <div class="datos-mini">
           ${w != null ? `<span title="${t('pesoTeorico')}">⚖️ ${u.kg(w)}</span>` : ''}
           ${a.comidaDia ? `<span title="${t('comidaDia')}">🌾 ${u.kg(a.comidaDia)}</span>` : ''}
@@ -71,7 +71,7 @@ X.vAnimais = (() => {
 
     const usadas = [...new Set(todos.map(a => a.especieId))].map(id => D.obter('especies', id)).filter(Boolean);
     const fChip = (campo, val, txt) => `<button class="filtro ${filtro[campo] === val ? 'activo' : ''}" data-accion="filtro-animais" data-campo="${campo}" data-valor="${val}">${txt}</button>`;
-    const filtros = (usadas.length > 1 ? fChip('especie', '', t('todas')) + usadas.map(e => fChip('especie', e.id, `${e.icono} ${u.esc(e.nome)}`)).join('') + '<span class="sep"></span>' : '')
+    const filtros = (usadas.length > 1 ? fChip('especie', '', t('todas')) + usadas.map(e => fChip('especie', e.id, `${e.icono} ${u.esc(D.nomeEspecie(e))}`)).join('') + '<span class="sep"></span>' : '')
       + fChip('sexo', '', t('todos')) + fChip('sexo', 'F', '♀ ' + t('femias')) + fChip('sexo', 'M', '♂ ' + t('machos'));
     const grupos = D.lista('grupos').sort(u.porNome);
     if (filtro.grupo && filtro.grupo !== '_sen' && !D.obter('grupos', filtro.grupo)) filtro.grupo = '';
@@ -198,7 +198,7 @@ X.vAnimais = (() => {
             <span class="cambiar-foto">${ui.ic('camera')}</span>
           </label>
           <div class="ficha-resumo">
-            <div class="sub">${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''} ${c.icono(a)} ${u.esc(e.nome)} · ${a.sexo === 'M' ? '♂ ' + t('macho') : '♀ ' + t('femia')}</div>
+            <div class="sub">${a.crotal ? `<span class="crotal">${u.esc(a.crotal)}</span>` : ''} ${c.icono(a)} ${u.esc(D.nomeEspecie(e))} · ${a.sexo === 'M' ? '♂ ' + t('macho') : '♀ ' + t('femia')}</div>
             <div class="chips">${chipsEstado(a)}</div>
             <dl class="datos">
               ${a.raza ? fila(t('raza'), u.esc(a.raza) + (a.razaCodigo ? ` <small>(${u.esc(a.razaCodigo)})</small>` : '')) : ''}
@@ -243,7 +243,7 @@ X.vAnimais = (() => {
     }
   }
   const opcionsParcelas = () => [['', t('senParcela')], ...D.lista('parcelas').filter(p => p.tipo !== 'forraxe').sort(u.porNome).map(p => [p.id, p.nome])];
-  const opcionsEspecies = () => D.lista('especies').sort(u.porNome).map(e => [e.id, `${e.icono} ${e.nome}`]);
+  const opcionsEspecies = () => D.lista('especies').sort(u.porNome).map(e => [e.id, `${e.icono} ${D.nomeEspecie(e)}`]);
 
   // Nomes de raza coñecidos para unha especie: os da táboa de códigos (da súa especie DIB) e os xa usados
   function nomesRazas(especieId) {

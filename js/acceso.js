@@ -20,8 +20,8 @@ X.acceso = (() => {
       <div class="acceso-marca">${ui.logo()}<h1>Xunguir</h1>${X.nube.entorno === 'test' ? `<span class="chip ambar">${t('probas')}</span>` : ''}</div>
       ${html}
       <div class="acceso-lingua">
-        <button class="enlace ${X.lang === 'gl' ? 'activa' : ''}" data-accion="lingua-acceso" data-lingua="gl">Galego</button> ·
-        <button class="enlace ${X.lang === 'es' ? 'activa' : ''}" data-accion="lingua-acceso" data-lingua="es">Castellano</button>
+        ${[['gl', 'Galego'], ['es', 'Castellano']].map(([l, nome]) =>
+          `<button class="enlace ${X.lang === l ? 'activa' : ''}" data-accion="lingua-acceso" data-lingua="${l}">${ui.bandeira(l)}<span>${nome}</span></button>`).join('')}
       </div></div>`;
     const f = el.querySelector('[autofocus]');
     if (f) f.focus();

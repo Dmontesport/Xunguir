@@ -1,6 +1,6 @@
 'use strict';
 
-// Mercado: anuncios de animais que ven todos os usuarios.
+// Mercado: anuncios de animais e do almacén (alpacas, sacos…) que ven todos os usuarios.
 // Está separado da xestión: os anuncios non son os rexistros da explotación (son unha copia
 // cos datos que o vendedor quere mostrar) e só se publican desde esta pestana.
 X.vMercado = (() => {
@@ -34,13 +34,31 @@ X.vMercado = (() => {
     outra: ['carne', 'leite', 'vida', 'reproducion', 'prenada', 'conCria', 'compania'],
   };
   // 'xeral' (filtro sen especie): só as comúns
-  const caracteristicasDe = e => e === 'xeral' ? CAR_COMUNS : [...new Set([...(CAR_ESPECIE[e] || CAR_ESPECIE.outra), ...CAR_COMUNS])];  const PROVINCIAS = ['A Coruña', 'Lugo', 'Ourense', 'Pontevedra', 'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila',
+  // 'almacen': as dos anuncios do almacén
+  const caracteristicasDe = e => e === 'almacen' ? CAR_ALMACEN : e === 'xeral' ? CAR_COMUNS : [...new Set([...(CAR_ESPECIE[e] || CAR_ESPECIE.outra), ...CAR_COMUNS])];
+
+  // Anuncios do almacén (categoria 'almacen'): na columna "especie" vai o tipo
+  const TIPOS_ALMACEN = ['alpaca', 'rolo', 'microsilo', 'silo', 'saco', 'outro'];
+  const PLURAL_ALMACEN = { alpaca: 'alpacas', rolo: 'rolos', microsilo: 'microsilos', saco: 'sacos', silo: 'silo', outro: 'unidades' };
+  const CAR_ALMACEN = ['primeiroCorte', 'segundoCorte', 'ecoloxico', 'senChoiva', 'baixoCuberto', 'transporteIncluido', 'cargaNaFinca'];
+  const almacen = a => a.categoria === 'almacen';
+  const nomeTipo = tp => tp === 'outro' ? t('produtoOutro') : t(tp);
+  const iconaTipo = tp => tp === 'outro' || !TIPOS_ALMACEN.includes(tp) ? '📦' : `<span class="unidade u-${tp}" aria-hidden="true"></span>`;
+  const opcionsTipo = () => TIPOS_ALMACEN.map(tp => [tp, nomeTipo(tp)]);
+  // "40 alpacas · 250 kg/u" ou "12.000 kg"
+  function textoCantidade(a) {
+    if (a.especie === 'silo') return a.kg ? u.kg(+a.kg) : '';
+    return [a.cantidade ? `${u.numero(a.cantidade, 0)} ${t(PLURAL_ALMACEN[a.especie] || 'unidades').toLowerCase()}` : '',
+      a.kg_unidade ? `${u.kg(+a.kg_unidade)}/u` : ''].filter(Boolean).join(' · ');
+  }
+
+  const PROVINCIAS = ['A Coruña', 'Lugo', 'Ourense', 'Pontevedra', 'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila',
     'Badajoz', 'Barcelona', 'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón', 'Ceuta', 'Ciudad Real', 'Córdoba', 'Cuenca',
     'Girona', 'Granada', 'Guadalajara', 'Gipuzkoa', 'Huelva', 'Huesca', 'Illes Balears', 'Jaén', 'La Rioja', 'Las Palmas', 'León',
     'Lleida', 'Madrid', 'Málaga', 'Melilla', 'Murcia', 'Navarra', 'Palencia', 'Salamanca', 'Santa Cruz de Tenerife', 'Segovia',
     'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo', 'Valencia', 'Valladolid', 'Bizkaia', 'Zamora', 'Zaragoza'];
 
-  const FILTROS_BALEIROS = () => ({ q: '', provincia: '', concello: '', especie: '', raza: '', sexo: '', prezoMin: '', prezoMax: '', idadeMax: '', caracteristicas: [] });
+  const FILTROS_BALEIROS = () => ({ q: '', categoria: '', provincia: '', concello: '', especie: '', raza: '', sexo: '', prezoMin: '', prezoMax: '', idadeMax: '', caracteristicas: [] });
   const st = {
     pestana: 'buscar', filtros: FILTROS_BALEIROS(), orde: 'recentes',
     anuncios: [], meus: [], porId: new Map(), cargando: false, erro: null, mais: false, clave: null, claveMeus: null,
@@ -71,6 +89,8 @@ X.vMercado = (() => {
     if (a.prezo_tipo === 'convir' || a.prezo == null) return t('aConvir');
     const p = (+a.prezo).toLocaleString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: a.prezo % 1 ? 2 : 0 });
     if (a.prezo_tipo === 'lote') return `${p} · ${t('oLote')}`;
+    if (a.prezo_tipo === 'kg') return `${p} / kg`;
+    if (almacen(a)) return a.especie === 'outro' ? p : `${p} / ${nomeTipo(a.especie).toLowerCase()}`;
     return a.cantidade > 1 ? `${p} / ${t('animal')}` : p;
   }
 
@@ -97,6 +117,7 @@ X.vMercado = (() => {
     const f = st.filtros;
     try {
       let q = sb().from('anuncios').select('*').eq('estado', 'activo').gt('caduca', new Date().toISOString());
+      if (f.categoria) q = q.eq('categoria', f.categoria);
       if (f.especie) q = q.eq('especie', f.especie);
       if (f.sexo) q = q.eq('sexo', f.sexo);
       if (f.provincia) q = q.eq('provincia', f.provincia);
@@ -106,7 +127,11 @@ X.vMercado = (() => {
       if (f.prezoMax !== '') q = q.lte('prezo', +f.prezoMax);
       if (f.idadeMax !== '') q = q.gte('nacemento', u.sumar(u.hoxe(), -Math.round(+f.idadeMax * 30.44)));
       if (f.caracteristicas.length) q = q.contains('caracteristicas', f.caracteristicas);
-      if (limpar(f.q)) { const x = limpar(f.q); q = q.or(`titulo.ilike.%${x}%,raza.ilike.%${x}%,descricion.ilike.%${x}%,concello.ilike.%${x}%`); }
+      if (limpar(f.q)) {
+        const x = limpar(f.q);
+        // O contido (herba, penso…) só existe despois de executar 004
+        q = q.or(`titulo.ilike.%${x}%,raza.ilike.%${x}%,descricion.ilike.%${x}%,concello.ilike.%${x}%${f.categoria === 'almacen' ? `,contido.ilike.%${x}%` : ''}`);
+      }
       // Por proximidade ordénase aquí, cunha tanda máis grande
       if (st.orde === 'prezoAsc') q = q.order('prezo', { ascending: true, nullsFirst: false });
       else if (st.orde === 'prezoDesc') q = q.order('prezo', { ascending: false, nullsFirst: false });
@@ -118,7 +143,8 @@ X.vMercado = (() => {
       st.anuncios = engadir ? [...st.anuncios, ...data] : data;
       st.mais = st.orde !== 'preto' && data.length === cantos;
     } catch (e) {
-      st.erro = /relation|schema cache|does not exist/i.test(e.message || '') ? t('mercadoSenTaboas') : e.message;
+      st.erro = /categoria|contido/i.test(e.message || '') ? t('mercadoSenAlmacen')
+        : /relation|schema cache|does not exist/i.test(e.message || '') ? t('mercadoSenTaboas') : e.message;
     } finally {
       st.cargando = false;
       X.app.render();
@@ -148,12 +174,17 @@ X.vMercado = (() => {
     return l.sort((a, b) => (destacado(b) ? 1 : 0) - (destacado(a) ? 1 : 0));
   }
 
+  // Debuxo cando o anuncio non ten foto
+  const phAnuncio = a => almacen(a) ? `<span class="ph-almacen">${iconaTipo(a.especie)}</span>` : ESPECIES[a.especie] || '🐾';
+
   function tarxeta(a) {
     const km = distancia(a), foto = a.fotos && a.fotos[0];
-    const meta = [ESPECIES[a.especie] ? `${ESPECIES[a.especie]} ${u.esc(a.raza || nomeEspecie(a.especie))}` : u.esc(a.raza || ''),
-      textoSexo(a.sexo), a.nacemento ? u.idade(a.nacemento) : '', a.cantidade > 1 ? X.tp('nAnimais', a.cantidade) : ''].filter(Boolean).join(' · ');
+    const meta = (almacen(a)
+      ? [`${iconaTipo(a.especie)} ${u.esc(a.contido || nomeTipo(a.especie))}`, textoCantidade(a), a.ano_colleita || '']
+      : [ESPECIES[a.especie] ? `${ESPECIES[a.especie]} ${u.esc(a.raza || nomeEspecie(a.especie))}` : u.esc(a.raza || ''),
+        textoSexo(a.sexo), a.nacemento ? u.idade(a.nacemento) : '', a.cantidade > 1 ? X.tp('nAnimais', a.cantidade) : '']).filter(Boolean).join(' · ');
     return `<article class="tarxeta-anuncio ${destacado(a) ? 'destacado' : ''} ${a.estado !== 'activo' ? 'inactivo' : ''}" data-accion="ver-anuncio" data-id="${a.id}" tabindex="0">
-      <div class="anuncio-foto">${foto ? `<img src="${u.esc(urlFoto(foto))}" alt="" loading="lazy" draggable="false">` : `<span class="ph">${ESPECIES[a.especie] || '🐾'}</span>`}
+      <div class="anuncio-foto">${foto ? `<img src="${u.esc(urlFoto(foto))}" alt="" loading="lazy" draggable="false">` : `<span class="ph">${phAnuncio(a)}</span>`}
         ${destacado(a) ? `<span class="selo-destacado">★ ${t('destacado')}</span>` : ''}
         ${a.estado !== 'activo' ? `<span class="cinta">${t('estadoAnuncio_' + a.estado)}</span>` : ''}
         ${a.fotos && a.fotos.length > 1 ? `<span class="n-fotos">📷 ${a.fotos.length}</span>` : ''}</div>
@@ -169,7 +200,7 @@ X.vMercado = (() => {
   function chipsFiltros() {
     const f = st.filtros, c = [];
     const chip = (campo, txt) => c.push(`<button class="filtro activo" data-accion="quitar-filtro-mercado" data-campo="${campo}">${txt} ✕</button>`);
-    if (f.especie) chip('especie', `${ESPECIES[f.especie]} ${nomeEspecie(f.especie)}`);
+    if (f.especie) chip('especie', f.categoria === 'almacen' ? `${iconaTipo(f.especie)} ${nomeTipo(f.especie)}` : `${ESPECIES[f.especie] || ''} ${nomeEspecie(f.especie)}`);
     if (f.raza) chip('raza', u.esc(f.raza));
     if (f.sexo) chip('sexo', textoSexo(f.sexo));
     if (f.provincia) chip('provincia', `📍 ${u.esc(f.provincia)}`);
@@ -185,7 +216,7 @@ X.vMercado = (() => {
     if (st.pestana === 'buscar' && st.clave !== claveBusca() && !st.cargando) { st.clave = claveBusca(); cargar(); }
     if (st.pestana === 'meus' && st.claveMeus !== 'ok' && !st.cargando) { st.claveMeus = 'ok'; cargarMeus(); }
 
-    const nFiltros = Object.entries(st.filtros).filter(([k, v]) => k !== 'q' && (Array.isArray(v) ? v.length : v !== '')).length;
+    const nFiltros = Object.entries(st.filtros).filter(([k, v]) => k !== 'q' && k !== 'categoria' && (Array.isArray(v) ? v.length : v !== '')).length;
     const lista = st.pestana === 'buscar' ? ordenados() : st.meus;
     let corpo;
     if (st.erro) corpo = `<div class="baleiro"><p>${u.esc(st.erro)}</p><button class="btn" data-accion="recargar-mercado">${ui.ic('refresh')}<span>${t('tentarDeNovo')}</span></button></div>`;
@@ -207,6 +238,10 @@ X.vMercado = (() => {
         <label><input type="radio" name="pestanaMercado" value="meus" ${st.pestana === 'meus' ? 'checked' : ''} data-cambio="pestana-mercado"><span>📣 ${t('meusAnuncios')}</span></label>
       </div>
       ${st.pestana === 'buscar' ? `
+        <div class="segmentado categorias-mercado">
+          ${[['', '✨', 'catTodo'], ['animal', '🐄', 'catAnimais'], ['almacen', '🏚️', 'catAlmacen']].map(([v, ic, k]) =>
+            `<label><input type="radio" name="categoriaMercado" value="${v}" ${st.filtros.categoria === v ? 'checked' : ''} data-cambio="categoria-mercado"><span>${ic} ${t(k)}</span></label>`).join('')}
+        </div>
         <form class="ferramentas" data-form="busca-mercado">
           <label class="busca">${ui.ic('search')}<input type="search" name="q" id="buscaMercado" value="${u.esc(st.filtros.q)}" placeholder="${t('buscarMercado')}" enterkeyhint="search"></label>
           <button type="button" class="btn" data-accion="filtros-mercado">⚙ <span>${t('filtros')}</span>${nFiltros ? ` <span class="insignia">${nFiltros}</span>` : ''}</button>
@@ -237,18 +272,25 @@ X.vMercado = (() => {
       <div class="modal-corpo ficha ficha-anuncio">
         ${a.fotos && a.fotos.length ? `<div class="carrusel-caixa"><div class="carrusel">${a.fotos.map(f => `<img src="${u.esc(urlFoto(f))}" alt="" loading="lazy">`).join('')}</div>
             ${a.fotos.length > 1 ? `<span class="carrusel-conta">1 / ${a.fotos.length}</span>` : ''}</div>`
-          : `<div class="anuncio-foto grande"><span class="ph">${ESPECIES[a.especie] || '🐾'}</span></div>`}
+          : `<div class="anuncio-foto grande"><span class="ph">${phAnuncio(a)}</span></div>`}
         <div class="prezo-anuncio grande">${textoPrezo(a)}</div>
         ${destacado(a) ? `<span class="selo-destacado estatico">★ ${t('destacado')}</span>` : ''}
         ${a.estado !== 'activo' ? `<p class="estado-repro ambar">${t('estadoAnuncio_' + a.estado)}</p>` : ''}
         ${a.caracteristicas && a.caracteristicas.length ? `<div class="chips">${a.caracteristicas.map(k => ui.chip(t('car_' + k), 'azul')).join('')}</div>` : ''}
         <dl class="datos">
+          ${almacen(a) ? `
+          ${fila(t('tipoUnidade'), `${iconaTipo(a.especie)} ${nomeTipo(a.especie)}`)}
+          ${fila(t('contido'), u.esc(a.contido || ''))}
+          ${fila(t('cantidade'), a.especie === 'silo' ? '' : a.cantidade ? u.numero(a.cantidade, 0) : '')}
+          ${fila(t('kgUnidade'), a.especie !== 'silo' && a.kg_unidade ? u.kg(+a.kg_unidade) : '')}
+          ${fila(t('kgTotais'), a.kg ? u.kg(+a.kg) : '')}
+          ${fila(t('anoColleita'), a.ano_colleita ? String(a.ano_colleita) : '')}` : `
           ${fila(t('especie'), `${ESPECIES[a.especie] || ''} ${nomeEspecie(a.especie)}`)}
           ${fila(t('raza'), u.esc(a.raza || ''))}
           ${fila(t('sexo'), textoSexo(a.sexo))}
           ${fila(t('idade'), a.nacemento ? `${u.idade(a.nacemento)} <small>(${u.data(a.nacemento)})</small>` : '')}
           ${fila(t('pesoAprox'), a.peso ? u.kg(+a.peso) : '')}
-          ${fila(t('cantidade'), a.cantidade > 1 ? X.tp('nAnimais', a.cantidade) : '')}
+          ${fila(t('cantidade'), a.cantidade > 1 ? X.tp('nAnimais', a.cantidade) : '')}`}
           ${fila(t('ubicacion'), `${u.esc([a.concello, a.provincia].filter(Boolean).join(', '))}${km != null ? ` <small>(${t('aKm', { km: Math.round(km) })})</small>` : ''}`)}
           ${fila(t('vendedor'), u.esc(a.vendedor_nome || ''))}
           ${fila(t('publicado'), u.data(a.creado.slice(0, 10)))}
@@ -303,34 +345,75 @@ X.vMercado = (() => {
   }
   const pintarFotos = () => { const c = document.querySelector('#modal .fotos-anuncio'); if (c) c.innerHTML = htmlFotos(); };
 
-  function formulario(a) {
+  // Campos propios dun animal
+  function camposAnimal(a) {
+    const meus = D.listo() && !a.id ? D.lista('animais').filter(X.calc.activo).sort(u.porNome) : [];
+    return {
+      desde: meus.length ? `<div class="desde-animal">${ui.campo(t('partirDunAnimal'),
+        ui.selector('animal', [['', t('ningunDesdeCero')], ...meus.map(x => [x.id, `${x.nome}${x.crotal ? ' · ' + x.crotal : ''}`])], '', 'data-cambio="anuncio-dun-animal"'),
+        t('axudaPartirAnimal'))}</div>` : '',
+      exemploTitulo: t('exemploTitulo'),
+      grella: `
+        ${ui.campo(t('especie') + ' *', ui.selector('especie', opcionsEspecie(a.especie), a.especie, 'data-cambio="especie-caracteristicas"'))}
+        ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="razasMercado" autocomplete="off"') + `<datalist id="razasMercado">${X.razas.lista().map(r => `<option value="${u.esc(r.nome)}">`).join('')}</datalist>`)}
+        ${ui.campo(t('sexo'), ui.selector('sexo', [['F', `♀ ${t('femia')}`], ['M', `♂ ${t('macho')}`], ['mixto', `⚥ ${t('mixto')}`]], a.sexo))}
+        ${ui.campo(t('nacemento'), ui.dataInp('nacemento', a.nacemento))}
+        ${ui.campo(t('pesoAprox') + ' (kg)', ui.numero('peso', a.peso))}
+        ${ui.campo(t('cantidade'), ui.numero('cantidade', a.cantidade, 'step="1" min="1" required'))}
+        ${ui.campo(t('prezo') + ' (€)', ui.numero('prezo', a.prezo))}
+        ${ui.campo(t('tipoPrezo'), ui.selector('prezo_tipo', [['unidade', t('porAnimal')], ['lote', t('polLote')], ['convir', t('aConvir')]], a.prezo_tipo))}`,
+      caracteristicas: a.especie,
+    };
+  }
+
+  // Campos propios do almacén (alpacas, rolos, silo, sacos…). Mostra uns ou outros segundo o tipo, como no almacén
+  function camposAlmacen(a) {
+    const lotes = D.listo() && !a.id ? D.lista('lotes').filter(l => X.calc.restantes(l) > 0).sort((x, y) => (y.data || '').localeCompare(x.data || '')) : [];
+    const contidos = ['contidoHerba', 'contidoSiloHerba', 'contidoSiloMillo', 'contidoPalla', 'contidoPenso', 'contidoMillo', 'contidoCebada', 'contidoMinerais', 'contidoFertilizante'];
+    return {
+      desde: lotes.length ? `<div class="desde-animal">${ui.campo(t('partirDunLote'),
+        ui.selector('lote', [['', t('ningunDesdeCero')], ...lotes.map(l => [l.id, `${l.nome || t(X.calc.tipoLote(l))}${l.contido ? ` (${l.contido})` : ''}`])], '', 'data-cambio="anuncio-dun-lote"'),
+        t('axudaPartirLote'))}</div>` : '',
+      exemploTitulo: t('exemploTituloAlmacen'),
+      grella: `
+        ${ui.campo(t('tipoUnidade') + ' *', ui.selector('especie', opcionsTipo(), a.especie, 'data-cambio="tipo-lote"'))}
+        ${ui.campo(t('contido'), ui.entrada('contido', a.contido, 'list="contidosMercado" autocomplete="off" maxlength="80"')
+          + `<datalist id="contidosMercado">${contidos.map(k => `<option value="${u.esc(t(k))}">`).join('')}</datalist>`)}
+        ${ui.campo(t('cantidade') + ' *', ui.numero('cantidade', a.cantidade, 'step="1" min="1"'), '', 'so-unidades')}
+        ${ui.campo(t('kgUnidade'), ui.numero('kg_unidade', a.kg_unidade), '', 'so-unidades')}
+        ${ui.campo(t('kgTotais') + ' *', ui.numero('kg', a.kg), '', 'so-silo')}
+        ${ui.campo(t('anoColleita'), ui.numero('ano_colleita', a.ano_colleita, 'step="1" min="1990" max="2100"'))}
+        ${ui.campo(t('prezo') + ' (€)', ui.numero('prezo', a.prezo))}
+        ${ui.campo(t('tipoPrezo'), ui.selector('prezo_tipo', [['unidade', t('porUnidade')], ['kg', t('porKg')], ['lote', t('polLote')], ['convir', t('aConvir')]], a.prezo_tipo))}`,
+      caracteristicas: 'almacen',
+    };
+  }
+
+  // manterFotos: ao cambiar entre animal e almacén nun anuncio novo non se perden as fotos xa escollidas
+  function formulario(a, categoria = 'animal', manterFotos = false) {
     const novo = !a;
+    if (a) categoria = a.categoria || 'animal';
+    const alm = categoria === 'almacen';
     a = a || {
-      especie: 'vacun', sexo: 'F', cantidade: 1, prezo_tipo: 'unidade', caracteristicas: [], whatsapp: true,
+      especie: alm ? 'alpaca' : 'vacun', sexo: 'F', cantidade: alm ? '' : 1, prezo_tipo: 'unidade', caracteristicas: [], whatsapp: true,
+      ano_colleita: alm ? new Date().getFullYear() : null,
       provincia: lembrado('provincia') || 'Ourense', concello: lembrado('concello'), telefono: lembrado('telefono'), vendedor_nome: lembrado('nome'),
     };
-    fotosForm = (a.fotos || []).map(ruta => ({ ruta }));
-    const meus = D.listo() ? D.lista('animais').filter(X.calc.activo).sort(u.porNome) : [];
-    return `<form data-form="anuncio" data-id="${a.id || ''}" class="modal-form form-anuncio">
+    if (!manterFotos) fotosForm = (a.fotos || []).map(ruta => ({ ruta }));
+    const c = alm ? camposAlmacen(a) : camposAnimal(a);
+    return `<form data-form="anuncio" data-id="${a.id || ''}" data-categoria="${categoria}" data-tipo-lote="${alm ? a.especie : ''}" class="modal-form form-anuncio">
       ${ui.cab(novo ? t('publicarAnuncio') : t('editarAnuncio'), !novo)}
       <div class="modal-corpo">
-        ${novo && meus.length ? `<div class="desde-animal">${ui.campo(t('partirDunAnimal'),
-          ui.selector('animal', [['', t('ningunDesdeCero')], ...meus.map(x => [x.id, `${x.nome}${x.crotal ? ' · ' + x.crotal : ''}`])], '', 'data-cambio="anuncio-dun-animal"'),
-          t('axudaPartirAnimal'))}</div>` : ''}
-        ${ui.campo(t('tituloAnuncio') + ' *', ui.entrada('titulo', a.titulo, `required minlength="3" maxlength="120" placeholder="${t('exemploTitulo')}"`))}
+        ${novo ? `<div class="segmentado categorias-mercado">
+          ${[['animal', '🐄', 'catAnimal'], ['almacen', '🏚️', 'catAlmacen']].map(([v, ic, k]) =>
+            `<label><input type="radio" name="categoria" value="${v}" ${categoria === v ? 'checked' : ''} data-cambio="categoria-anuncio"><span>${ic} ${t(k)}</span></label>`).join('')}
+        </div>` : ''}
+        ${c.desde}
+        ${ui.campo(t('tituloAnuncio') + ' *', ui.entrada('titulo', a.titulo, `required minlength="3" maxlength="120" placeholder="${c.exemploTitulo}"`))}
         <h4>${t('fotos')} <small>(${t('ataN', { n: MAX_FOTOS })})</small></h4>
         <div class="fotos-anuncio">${htmlFotos()}</div>
-        <div class="grella-campos">
-          ${ui.campo(t('especie') + ' *', ui.selector('especie', opcionsEspecie(a.especie), a.especie, 'data-cambio="especie-caracteristicas"'))}
-          ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="razasMercado" autocomplete="off"') + `<datalist id="razasMercado">${X.razas.lista().map(r => `<option value="${u.esc(r.nome)}">`).join('')}</datalist>`)}
-          ${ui.campo(t('sexo'), ui.selector('sexo', [['F', `♀ ${t('femia')}`], ['M', `♂ ${t('macho')}`], ['mixto', `⚥ ${t('mixto')}`]], a.sexo))}
-          ${ui.campo(t('nacemento'), ui.dataInp('nacemento', a.nacemento))}
-          ${ui.campo(t('pesoAprox') + ' (kg)', ui.numero('peso', a.peso))}
-          ${ui.campo(t('cantidade'), ui.numero('cantidade', a.cantidade, 'step="1" min="1" required'))}
-          ${ui.campo(t('prezo') + ' (€)', ui.numero('prezo', a.prezo))}
-          ${ui.campo(t('tipoPrezo'), ui.selector('prezo_tipo', [['unidade', t('porAnimal')], ['lote', t('polLote')], ['convir', t('aConvir')]], a.prezo_tipo))}
-        </div>
-        ${ui.campo(t('caracteristicas'), `<div class="caixa-caracteristicas">${chipsCaracteristicas(a.especie, a.caracteristicas || [])}</div>`)}
+        <div class="grella-campos">${c.grella}</div>
+        ${ui.campo(t('caracteristicas'), `<div class="caixa-caracteristicas">${chipsCaracteristicas(c.caracteristicas, a.caracteristicas || [])}</div>`)}
         ${ui.campo(t('descricion'), `<textarea name="descricion" rows="4" maxlength="3000">${u.esc(a.descricion || '')}</textarea>`)}
         <fieldset><legend>${t('ubicacionContacto')}</legend><div class="grella-campos">
           ${ui.campo(t('provincia') + ' *', ui.selector('provincia', PROVINCIAS.map(p => [p, p]), a.provincia, 'required'))}
@@ -345,7 +428,36 @@ X.vMercado = (() => {
     </form>`;
   }
 
-  const abrirFormulario = a => ui.modal.abrir(formulario(a), { volver: a ? () => verFicha(a.id) : null });
+  const abrirFormulario = (a, categoria) => ui.modal.abrir(formulario(a, categoria), { volver: a ? () => verFicha(a.id) : null });
+
+  // Anuncio novo: cambiar entre animal e almacén (consérvanse título, fotos e contacto)
+  X.cambios['categoria-anuncio'] = el => {
+    const vello = el.form, conservar = ['titulo', 'descricion', 'provincia', 'concello', 'telefono', 'vendedor_nome'];
+    const valores = Object.fromEntries(conservar.map(k => [k, vello.elements[k] ? vello.elements[k].value : '']));
+    const whatsapp = vello.elements.whatsapp.checked;
+    ui.modal.abrir(formulario(null, el.value, true));
+    const novo = document.querySelector('#modal form[data-form="anuncio"]');
+    conservar.forEach(k => { if (novo.elements[k] && valores[k]) novo.elements[k].value = valores[k]; });
+    novo.elements.whatsapp.checked = whatsapp;
+  };
+
+  // Partir dun lote do almacén: copia tipo, contido, o que queda e os kg por unidade
+  X.cambios['anuncio-dun-lote'] = el => {
+    const l = D.obter('lotes', el.value), f = el.form;
+    if (!l) return;
+    const tp = X.calc.tipoLote(l), rest = X.calc.restantes(l);
+    f.elements.especie.value = tp;
+    f.dataset.tipoLote = tp;
+    f.elements.contido.value = l.contido || '';
+    if (tp === 'silo') f.elements.kg.value = Math.floor(rest);
+    else { f.elements.cantidade.value = Math.floor(rest); f.elements.kg_unidade.value = l.kgUnidade || ''; }
+    if (l.data) f.elements.ano_colleita.value = l.data.slice(0, 4);
+    if (!f.elements.titulo.value) {
+      f.elements.titulo.value = tp === 'silo'
+        ? `${t('silo')}${l.contido ? ` · ${l.contido}` : ''} · ${u.kg(Math.floor(rest))}`
+        : `${Math.floor(rest)} ${t(PLURAL_ALMACEN[tp]).toLowerCase()}${l.contido ? ` · ${l.contido}` : ''}`;
+    }
+  };
 
   // Partir dun animal propio: copia os datos que interesan (a ficha da xestión non se toca)
   X.cambios['anuncio-dun-animal'] = async el => {
@@ -361,7 +473,7 @@ X.vMercado = (() => {
     f.elements.nacemento.value = a.nacemento || '';
     f.elements.peso.value = w ? Math.round(w) : '';
     f.elements.cantidade.value = 1;
-    if (!f.elements.titulo.value) f.elements.titulo.value = [a.raza || e.nome, a.sexo === 'M' ? t('macho') : t('femia'), a.nacemento ? u.idade(a.nacemento) : ''].filter(Boolean).join(' · ');
+    if (!f.elements.titulo.value) f.elements.titulo.value = [a.raza || D.nomeEspecie(e), a.sexo === 'M' ? t('macho') : t('femia'), a.nacemento ? u.idade(a.nacemento) : ''].filter(Boolean).join(' · ');
     if (a.prenada || (X.calc.repro(a) || {}).estado === 'prenada') {
       const c = f.querySelector('[name=caracteristicas][value=prenada]');
       if (c) c.checked = true;
@@ -393,6 +505,10 @@ X.vMercado = (() => {
     const f = new FormData(form), s = k => String(f.get(k) || '').trim();
     const prev = form.dataset.id ? st.porId.get(form.dataset.id) : null;
     const id = prev ? prev.id : novoUuid(), uid = X.nube.uid();
+    const alm = form.dataset.categoria === 'almacen', tipo = s('especie');
+    // Almacén: no silo cóntanse kg; no resto, unidades
+    if (alm && tipo === 'silo' && !(u.num(f.get('kg')) > 0)) { ui.toast(t('faltanKg'), 'erro'); return; }
+    if (alm && tipo !== 'silo' && !(u.num(f.get('cantidade')) >= 1)) { ui.toast(t('faltanUnidades'), 'erro'); return; }
     ui.toast(t('publicando'));
 
     // Fotos: sube as novas e borra as que se quitaron
@@ -411,18 +527,29 @@ X.vMercado = (() => {
     const provincia = s('provincia'), concello = s('concello');
     const pos = prev && prev.provincia === provincia && prev.concello === concello && prev.lat != null
       ? { lat: prev.lat, lon: prev.lon } : await xeocodificar(concello, provincia);
-    const rexistro = {
-      id, titulo: s('titulo'), especie: s('especie'), raza: s('raza') || null, sexo: s('sexo') || null,
-      nacemento: s('nacemento') || null, peso: u.num(f.get('peso')), cantidade: Math.max(1, Math.round(u.num(f.get('cantidade')) || 1)),
+    const cantidade = Math.max(1, Math.round(u.num(f.get('cantidade')) || 1));
+    const comun = {
+      id, titulo: s('titulo'), especie: tipo, cantidade,
       prezo: s('prezo_tipo') === 'convir' ? null : u.num(f.get('prezo')), prezo_tipo: s('prezo_tipo'),
       caracteristicas: f.getAll('caracteristicas'), descricion: s('descricion') || null,
       provincia, concello: concello || null, lat: pos ? pos.lat : null, lon: pos ? pos.lon : null,
       telefono: s('telefono'), whatsapp: f.get('whatsapp') === 'on', vendedor_nome: s('vendedor_nome') || null, fotos,
     };
+    // Os campos do almacén só se envían nos seus anuncios: así os de animais funcionan aínda sen executar 004
+    const kgUnidade = tipo === 'silo' ? null : u.num(f.get('kg_unidade'));
+    const rexistro = alm
+      ? { ...comun, categoria: 'almacen', raza: null, sexo: null, nacemento: null, peso: null, cantidade: tipo === 'silo' ? 1 : cantidade,
+        contido: s('contido') || null, kg_unidade: kgUnidade,
+        kg: tipo === 'silo' ? u.num(f.get('kg')) : (kgUnidade ? Math.round(kgUnidade * cantidade) : null),
+        ano_colleita: u.num(f.get('ano_colleita')) ? Math.round(u.num(f.get('ano_colleita'))) : null }
+      : { ...comun, raza: s('raza') || null, sexo: s('sexo') || null, nacemento: s('nacemento') || null, peso: u.num(f.get('peso')) };
     const { data, error } = await X.nube.limite(prev
       ? sb().from('anuncios').update(rexistro).eq('id', id).select().single()
       : sb().from('anuncios').insert(rexistro).select().single());
-    if (error) throw error;
+    if (error) throw /categoria|contido|kg_unidade|ano_colleita/i.test(error.message || '') ? new Error(t('mercadoSenAlmacen')) : error;
+    // Lembra de que lote saíu, para descontalo ao vendelo
+    const loteOrixe = alm && f.get('lote') && D.obter('lotes', f.get('lote'));
+    if (loteOrixe) D.gardar('lotes', { ...loteOrixe, anuncio: id });
     ['provincia', 'concello', 'telefono'].forEach(k => lembrar(k, rexistro[k]));
     lembrar('nome', rexistro.vendedor_nome);
     st.porId.set(id, data);
@@ -434,17 +561,36 @@ X.vMercado = (() => {
   // ---------- Accións do anuncio ----------
   async function cambiar(id, cambios, msg) {
     const { data, error } = await X.nube.limite(sb().from('anuncios').update(cambios).eq('id', id).select().single());
-    if (error) { ui.toast(error.message, 'erro'); return; }
+    if (error) { ui.toast(error.message, 'erro'); return false; }
     st.porId.set(id, data);
     refrescar();
     if (msg) ui.toast(msg, 'ok');
+    return true;
   }
 
   X.accions['ver-anuncio'] = el => verFicha(el.dataset.id);
-  X.accions['publicar-anuncio'] = () => abrirFormulario(null);
+  // Se se está mirando o almacén, o anuncio novo empeza como do almacén
+  X.accions['publicar-anuncio'] = () => abrirFormulario(null, st.filtros.categoria === 'almacen' ? 'almacen' : 'animal');
   X.accions['editar-anuncio'] = el => abrirFormulario(st.porId.get(el.dataset.id));
-  X.accions['estado-anuncio'] = el => cambiar(el.dataset.id, { estado: el.dataset.estado },
-    el.dataset.estado === 'vendido' ? t('anuncioVendido') : t('anuncioRetirado'));
+  X.accions['estado-anuncio'] = async el => {
+    const id = el.dataset.id, vendido = el.dataset.estado === 'vendido';
+    const feito = await cambiar(id, { estado: el.dataset.estado }, vendido ? t('anuncioVendido') : t('anuncioRetirado'));
+    if (feito && vendido) await descontarDoLote(st.porId.get(id));
+  };
+
+  // Vendido un anuncio que saíu dun lote do almacén: ofrece quitalo do lote
+  async function descontarDoLote(a) {
+    if (!a || !almacen(a) || !D.listo()) return;
+    const l = D.lista('lotes').find(x => x.anuncio === a.id);
+    if (!l) return;
+    const silo = X.calc.tipoLote(l) === 'silo';
+    const n = Math.min(X.calc.restantes(l), silo ? (+a.kg || 0) : (+a.cantidade || 0));
+    if (!(n > 0)) return;
+    const cantidade = silo ? u.kg(n) : `${u.numero(n, 2)} ${t(PLURAL_ALMACEN[X.calc.tipoLote(l)] || 'unidades').toLowerCase()}`;
+    if (!await ui.confirmar(t('descontarDoLote', { cantidade, nome: l.nome || t(X.calc.tipoLote(l)) }), { aceptar: t('descontar') })) return;
+    D.gardar('lotes', { ...l, consumos: [...(l.consumos || []), { data: u.hoxe(), n, venda: true }] });
+    ui.toast(t('descontado'), 'ok');
+  }
   X.accions['renovar-anuncio'] = el => cambiar(el.dataset.id,
     { estado: 'activo', caduca: new Date(Date.now() + DIAS_CADUCA * 864e5).toISOString() }, t('anuncioRenovado'));
   X.accions['borrar-anuncio'] = async el => {
@@ -471,6 +617,11 @@ X.vMercado = (() => {
 
   // ---------- Busca e filtros ----------
   X.cambios['pestana-mercado'] = el => { st.pestana = el.value; st.erro = null; X.app.render(); };
+  // Todo / Animais / Almacén: os filtros dunha categoría non valen para a outra
+  X.cambios['categoria-mercado'] = el => {
+    st.filtros = { ...st.filtros, categoria: el.value, especie: '', raza: '', sexo: '', idadeMax: '', caracteristicas: [] };
+    X.app.render();
+  };
   X.formularios['busca-mercado'] = form => { st.filtros.q = String(new FormData(form).get('q') || ''); X.app.render(); };
   X.cambios['orde-mercado'] = el => {
     st.orde = el.value;
@@ -500,20 +651,25 @@ X.vMercado = (() => {
   }
 
   X.accions['filtros-mercado'] = () => {
-    const f = st.filtros;
-    ui.modal.abrir(`<form data-form="filtros-mercado" class="modal-form">
-      ${ui.cab(t('filtros'))}
-      <div class="modal-corpo"><div class="grella-campos">
+    const f = st.filtros, alm = f.categoria === 'almacen';
+    // No almacén fíltrase polo tipo (alpaca, saco…) e as súas características; nos animais, como sempre
+    const camposAnimal = `
         ${ui.campo(t('especie'), ui.selector('especie', [['', t('todas')], ...opcionsEspecie(f.especie)], f.especie, 'data-cambio="especie-caracteristicas"'))}
         ${ui.campo(t('raza'), ui.entrada('raza', f.raza, 'list="razasFiltro" autocomplete="off"') + `<datalist id="razasFiltro">${X.razas.lista().map(r => `<option value="${u.esc(r.nome)}">`).join('')}</datalist>`)}
         ${ui.campo(t('sexo'), ui.selector('sexo', [['', t('todos')], ['F', `♀ ${t('femias')}`], ['M', `♂ ${t('machos')}`], ['mixto', `⚥ ${t('mixto')}`]], f.sexo))}
-        ${ui.campo(t('idadeMaxima') + ` (${t('mesesUnidade')})`, ui.numero('idadeMax', f.idadeMax, 'step="1"'))}
+        ${ui.campo(t('idadeMaxima') + ` (${t('mesesUnidade')})`, ui.numero('idadeMax', f.idadeMax, 'step="1"'))}`;
+    const camposAlmacen = ui.campo(t('tipoUnidade'), ui.selector('especie', [['', t('todos')], ...opcionsTipo()], f.especie));
+    ui.modal.abrir(`<form data-form="filtros-mercado" class="modal-form">
+      ${ui.cab(t('filtros'))}
+      <div class="modal-corpo"><div class="grella-campos">
+        ${alm ? camposAlmacen : camposAnimal}
         ${ui.campo(t('prezoMinimo') + ' (€)', ui.numero('prezoMin', f.prezoMin))}
         ${ui.campo(t('prezoMaximo') + ' (€)', ui.numero('prezoMax', f.prezoMax))}
         ${ui.campo(t('provincia'), ui.selector('provincia', [['', t('todas')], ...PROVINCIAS.map(p => [p, p])], f.provincia))}
         ${ui.campo(t('concello'), ui.entrada('concello', f.concello, 'autocomplete="off"'))}
       </div>
-      ${ui.campo(t('caracteristicas'), `<div class="caixa-caracteristicas">${chipsCaracteristicas(f.especie || 'xeral', f.caracteristicas)}</div>`, f.especie ? '' : t('axudaCaracteristicasEspecie'))}
+      ${ui.campo(t('caracteristicas'), `<div class="caixa-caracteristicas">${chipsCaracteristicas(alm ? 'almacen' : f.especie || 'xeral', f.caracteristicas)}</div>`,
+        alm || f.especie ? '' : t('axudaCaracteristicasEspecie'))}
       </div>
       ${ui.pe(`<button type="button" class="btn" data-accion="limpar-filtros-mercado">${t('limparFiltros')}</button><span class="espazo"></span>${ui.btnGardar(t('aplicar'))}`)}
     </form>`);
@@ -525,7 +681,7 @@ X.vMercado = (() => {
     ui.modal.pechar();
     X.app.render();
   };
-  X.accions['limpar-filtros-mercado'] = () => { st.filtros = { ...FILTROS_BALEIROS(), q: st.filtros.q }; ui.modal.pechar(); X.app.render(); };
+  X.accions['limpar-filtros-mercado'] = () => { st.filtros = { ...FILTROS_BALEIROS(), q: st.filtros.q, categoria: st.filtros.categoria }; ui.modal.pechar(); X.app.render(); };
 
   return { render };
 })();

@@ -595,7 +595,7 @@ X.vParcelas = (() => {
         <section class="seccion"><h3>${t('consumos')}</h3>
           ${cons.length || auto ? `<ul class="lista-simple">
             ${auto ? `<li><span>🔁 ${t('gastoDesde', { data: u.data(l.gastoDesde) })}</span><b>−${silo ? u.numero(auto, 0) : cant(auto)}${un}</b><span class="btn-icono peq"></span></li>` : ''}
-            ${cons.map(x => `<li><span>${x.auto ? '🔁 ' : ''}${u.data(x.data)}</span><b>${x.n > 0 ? '−' : '+'}${silo ? u.numero(Math.abs(x.n), 0) : cant(Math.abs(x.n))}${un}</b>
+            ${cons.map(x => `<li><span>${x.auto ? '🔁 ' : x.venda ? `⚖️ ${t('vendido')} · ` : ''}${u.data(x.data)}</span><b>${x.n > 0 ? '−' : '+'}${silo ? u.numero(Math.abs(x.n), 0) : cant(Math.abs(x.n))}${un}</b>
             <button class="btn-icono peq" data-accion="borrar-consumo" data-id="${l.id}" data-i="${x.i}" aria-label="${t('borrar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`
           : `<p class="nota">${t('senConsumos')}</p>`}
         </section>

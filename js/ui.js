@@ -36,6 +36,13 @@ X.ui = (() => {
 
   const logo = () => `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#3f7d3a"/><path d="M8 28Q32 14 56 28" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M14 26v10a6.5 6.5 0 0 0 13 0V23M37 23v13a6.5 6.5 0 0 0 13 0V26" fill="none" stroke="#f1dca4" stroke-width="4.5" stroke-linecap="round"/></svg>`;
 
+  // Bandeiras dos idiomas (en SVG: Windows non debuxa as bandeiras emoji e Galicia non ten)
+  const BANDEIRAS = {
+    gl: '<rect width="30" height="20" fill="#fff"/><path d="M0 0L30 20" stroke="#0d94d2" stroke-width="5.5"/>',
+    es: '<rect width="30" height="20" fill="#c60b1e"/><rect y="5" width="30" height="10" fill="#ffc400"/>',
+  };
+  const bandeira = lingua => `<svg class="bandeira" viewBox="0 0 30 20" aria-hidden="true"><clipPath id="bd-${lingua}"><rect width="30" height="20" rx="2.5"/></clipPath><g clip-path="url(#bd-${lingua})">${BANDEIRAS[lingua]}</g></svg>`;
+
   // ---- Toasts ----
   function toast(msg, tipo = '', accion = null) {
     const el = document.createElement('div');
@@ -156,5 +163,5 @@ X.ui = (() => {
   const botonAviso = a => `<button class="aviso nivel-${a.nivel}" data-accion="ir-aviso" data-tipo="${a.ref.tipo}" data-id="${a.ref.id || ''}">
     <span class="punto"></span><span class="txt"><b>${u.esc(a.texto)}</b>${a.detalle ? `<small>${u.esc(a.detalle)}</small>` : ''}</span></button>`;
 
-  return { ic, logo, toast, modal, confirmar, cab, campo, entrada, numero, dataInp, selector, pe, btnGardar, btnCancelar, foto, chip, tiraAvisos, botonAviso };
+  return { ic, logo, bandeira, toast, modal, confirmar, cab, campo, entrada, numero, dataInp, selector, pe, btnGardar, btnCancelar, foto, chip, tiraAvisos, botonAviso };
 })();

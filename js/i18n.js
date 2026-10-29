@@ -139,6 +139,15 @@ X.i18n = {
     car_colmeaCompleta: 'Colmea completa', car_enxame: 'Enxame', car_rainaNova: 'Raíña nova', car_nucleo: 'Núcleo', car_mel: 'Mel',
     car_gando: 'Can de gando', car_garda: 'Garda', car_caza: 'Caza', car_adestrado: 'Adestrado', car_cachorro: 'Cachorro',
     axudaCaracteristicasEspecie: 'Escolle unha especie para ver as súas características',
+    // Mercado: almacén
+    catTodo: 'Todo', catAnimais: 'Animais', catAnimal: 'Animal', catAlmacen: 'Almacén', produtoOutro: 'Outro',
+    anoColleita: 'Ano de colleita', porUnidade: 'Por unidade', porKg: 'Por kg',
+    partirDunLote: 'Partir dun lote do meu almacén', axudaPartirLote: 'Cópianse o tipo, o contido e o que queda; o almacén non se toca ata que o vendas.',
+    exemploTituloAlmacen: 'p. ex. 40 alpacas de herba seca de 2025',
+    mercadoSenAlmacen: 'Os anuncios do almacén aínda non están activados no servidor (falta executar 004_mercado_almacen.sql en Supabase).',
+    descontarDoLote: 'Quitar {cantidade} do lote «{nome}» do teu almacén?', descontar: 'Quitar do almacén', descontado: 'Quitado do almacén',
+    car_primeiroCorte: 'Primeiro corte', car_segundoCorte: 'Segundo corte', car_senChoiva: 'Sen choiva', car_baixoCuberto: 'Gardado baixo cuberto',
+    car_transporteIncluido: 'Transporte incluído', car_cargaNaFinca: 'Cárgase na finca',
     // Perfil
     perfil: 'Perfil', queEres: 'Que es?', axudaPerfil: 'Así Xunguir ábrese onde máis o necesitas. Podes cambialo cando queiras en Configuración.',
     perfil_granxeiro: 'Granxeiro', perfil_tratante: 'Tratante',
@@ -373,6 +382,15 @@ X.i18n = {
     car_colmeaCompleta: 'Colmena completa', car_enxame: 'Enjambre', car_rainaNova: 'Reina nueva', car_nucleo: 'Núcleo', car_mel: 'Miel',
     car_gando: 'Perro de ganado', car_garda: 'Guarda', car_caza: 'Caza', car_adestrado: 'Adiestrado', car_cachorro: 'Cachorro',
     axudaCaracteristicasEspecie: 'Elige una especie para ver sus características',
+    // Mercado: almacén
+    catTodo: 'Todo', catAnimais: 'Animales', catAnimal: 'Animal', catAlmacen: 'Almacén', produtoOutro: 'Otro',
+    anoColleita: 'Año de cosecha', porUnidade: 'Por unidad', porKg: 'Por kg',
+    partirDunLote: 'Partir de un lote de mi almacén', axudaPartirLote: 'Se copian el tipo, el contenido y lo que queda; el almacén no se toca hasta que lo vendas.',
+    exemploTituloAlmacen: 'p. ej. 40 alpacas de hierba seca de 2025',
+    mercadoSenAlmacen: 'Los anuncios del almacén aún no están activados en el servidor (falta ejecutar 004_mercado_almacen.sql en Supabase).',
+    descontarDoLote: '¿Quitar {cantidade} del lote «{nome}» de tu almacén?', descontar: 'Quitar del almacén', descontado: 'Quitado del almacén',
+    car_primeiroCorte: 'Primer corte', car_segundoCorte: 'Segundo corte', car_senChoiva: 'Sin lluvia', car_baixoCuberto: 'Guardado bajo techo',
+    car_transporteIncluido: 'Transporte incluido', car_cargaNaFinca: 'Se carga en la finca',
     // Perfil
     perfil: 'Perfil', queEres: '¿Qué eres?', axudaPerfil: 'Así Xunguir se abre donde más lo necesitas. Puedes cambiarlo cuando quieras en Configuración.',
     perfil_granxeiro: 'Granjero', perfil_tratante: 'Tratante',

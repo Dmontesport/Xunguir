@@ -147,6 +147,14 @@ X.datos = (() => {
     cambiado();
   }
 
+  // Nome dunha especie no idioma escollido. As predefinidas gárdanse co nome no idioma
+  // que había ao crealas: mentres non se lles cambie o nome, móstranse traducidas
+  function nomeEspecie(e) {
+    if (!e) return '';
+    const p = PRESETS.find(x => x.id === e.id);
+    return p && Object.values(p.nome).includes(e.nome) ? (p.nome[X.lang] || p.nome.gl) : e.nome;
+  }
+
   // Unha soa vez por explotación: engade as especies predefinidas novas que non teña
   // (se se borrou unha despois, non volve aparecer)
   function engadirEspeciesNovas() {
@@ -267,7 +275,7 @@ X.datos = (() => {
   }
 
   return {
-    PRESETS, RAZAS_DEF, COLECCIONS, cargar, lista, obter, gardar, borrar, gardarAnimal, gardarConfig, lote, engadirEspeciesNovas,
+    PRESETS, RAZAS_DEF, COLECCIONS, cargar, lista, obter, gardar, borrar, gardarAnimal, gardarConfig, lote, engadirEspeciesNovas, nomeEspecie,
     cambiosPendentes, confirmarSubidos, aplicarRemotos, ultimaSync, gardarUltimaSync, marcarTodoPendente,
     fusionar, substituir, estadoVello, arquivarVello, borrarLocal,
     nPendentes: () => pendentes.size, listo: () => !!estado,
