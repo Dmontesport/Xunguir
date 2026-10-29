@@ -56,15 +56,14 @@ X.novidades = (() => {
   const publicadas = () => LISTA.filter(n => comparar(n.version, X.VERSION) <= 0);
 
   function mostrar(lista, titulo) {
-    ui.modal.abrir(`<div class="modal-form peq novidades">
-      ${ui.cab(titulo)}
-      <div class="modal-corpo">${lista.map(n => `<section>
+    // Directamente na caixa da ventá (como as fichas): só así o corpo se despraza co dedo
+    ui.modal.abrir(`${ui.cab(titulo)}
+      <div class="modal-corpo novidades">${lista.map(n => `<section>
         ${lista.length > 1 || !titulo.includes(n.version) ? `<h3 class="novidades-version">${t('versionData', { v: n.version, data: u.data(n.data) })}</h3>` : ''}
         <ul class="lista-novidades">${(n[X.lang] || n.gl).map(([ic, tit, txt]) =>
           `<li><span class="novidade-ic">${ic}</span><div><b>${u.esc(tit)}</b><p>${u.esc(txt)}</p></div></li>`).join('')}</ul></section>`).join('')}
       </div>
-      ${ui.pe(`<span class="espazo"></span><button class="btn primario" data-accion="pechar">${t('entendido')}</button>`)}
-    </div>`);
+      ${ui.pe(`<span class="espazo"></span><button class="btn primario" data-accion="pechar">${t('entendido')}</button>`)}`);
   }
 
   // Conta nova (sen ningún dato na explotación): non se lle amosan novidades.
