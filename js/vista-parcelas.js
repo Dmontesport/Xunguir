@@ -4,11 +4,24 @@
 X.vParcelas = (() => {
   const u = X.u, ui = X.ui, c = X.calc, D = X.datos;
   const t = (...a) => X.t(...a);
-  const TIPOS = ['alpaca', 'rolo', 'microsilo', 'silo'];
-  const PLURAL = { alpaca: 'alpacas', rolo: 'rolos', microsilo: 'microsilos', silo: 'silo' };
+  const TIPOS = c.TIPOS_LOTE;
+  const PLURAL = { alpaca: 'alpacas', rolo: 'rolos', microsilo: 'microsilos', saco: 'sacos', silo: 'silo' };
+  // Suxestións para o contido dun lote (pódese escribir calquera outro)
+  const CONTIDOS = ['contidoHerba', 'contidoSiloHerba', 'contidoSiloMillo', 'contidoPalla', 'contidoPenso', 'contidoMillo', 'contidoCebada', 'contidoMinerais', 'contidoFertilizante'];
 
   const iconaUnidade = tp => `<span class="unidade u-${tp}" aria-hidden="true"></span>`;
   const nomeLote = l => l.nome || t(c.tipoLote(l));
+  // Cantidades do almacén: co gasto diario pode haber decimais (½ alpaca ao día)
+  const cant = n => u.numero(n, 2);
+  // Unidade do gasto diario: kg no silo; no resto, o tipo de lote en plural
+  const unidadeGasto = l => c.tipoLote(l) === 'silo' ? 'kg' : t(PLURAL[c.tipoLote(l)]).toLowerCase();
+  // "quedan 12 días (ata o 10/11)" co gasto diario actual
+  function textoDiasLote(l) {
+    const d = c.diasLote(l);
+    if (!isFinite(d)) return '';
+    if (c.restantes(l) <= 0) return t('esgotado');
+    return t('quedanDiasLote', { dias: d < 1 ? t('menosDunDia') : u.dias(Math.floor(d)), data: u.data(u.sumar(u.hoxe(), Math.floor(d))) });
+  }
   const tipoParcela = p => c.tipoLote({ tipo: p.tipoUnidade });
 
   // ---------- Representación ----------
@@ -51,13 +64,13 @@ X.vParcelas = (() => {
   }
 
   function tarxetaPasto(p) {
-    const n = nivel(p), cons = c.consumo(p), b = (+p.crecemento || 0) - cons;
+    const n = nivel(p), cons = c.consumo(p), ap = c.aporte(p), b = c.balance(p);
     return `<article class="tarxeta-parcela" data-accion="ver-parcela" data-id="${p.id}" tabindex="0">
       ${campoVisual(p)}
       <div class="info">
         <div class="nome-fila"><h3>${u.esc(p.nome)}</h3>${p.superficie ? `<span class="sub">${u.numero(p.superficie, 2)} ha</span>` : ''}</div>
         <div class="stock"><b>${u.kg(n.s)}</b>${isFinite(n.cap) ? ` / ${u.kg(n.cap)}` : ''}</div>
-        <div class="balance"><span class="pos">+${u.kg(+p.crecemento || 0)}</span> <span class="neg">−${u.kg(cons)}</span> = <b class="${b < 0 ? 'neg' : 'pos'}">${signo(b)}/${t('dia')}</b></div>
+        <div class="balance"><span class="pos">+${u.kg(+p.crecemento || 0)}</span>${ap ? ` <span class="pos" title="${t('gastoDiario')}">+${u.kg(ap)} 🏚️</span>` : ''} <span class="neg">−${u.kg(cons)}</span> = <b class="${b < 0 ? 'neg' : 'pos'}">${signo(b)}/${t('dia')}</b></div>
         <div class="prev">${textoPrevision(n.pr)}</div>
       </div>
     </article>`;
@@ -82,9 +95,9 @@ X.vParcelas = (() => {
   function visualLote(l) {
     const tp = c.tipoLote(l), tot = c.totalLote(l), rest = c.restantes(l);
     if (tp === 'silo') return `<div class="barra-silo"><span style="width:${tot ? (rest / tot * 100).toFixed(1) : 0}%"></span></div>`;
-    if (tot > 60) return `<div class="alpacas">${iconaUnidade(tp)} × ${rest}</div>`;
+    if (tot > 60) return `<div class="alpacas">${iconaUnidade(tp)} × ${cant(rest)}</div>`;
     let h = '';
-    for (let i = 0; i < tot; i++) h += `<span class="unidade u-${tp} ${i < rest ? '' : 'gastada'}"></span>`;
+    for (let i = 0; i < Math.ceil(tot); i++) h += `<span class="unidade u-${tp} ${i < rest ? '' : 'gastada'}"></span>`;
     return `<div class="alpacas">${h}</div>`;
   }
 
@@ -98,10 +111,11 @@ X.vParcelas = (() => {
       <span class="lote-icona" title="${t(tp)}">${iconaUnidade(tp)}</span>
       <div class="lote-info">
         <b>${u.esc(nomeLote(l))}</b>
-        <small>${t(tp)} · ${p ? u.esc(p.nome) : l.parcelaId ? '—' : t('comprado')} · ${u.data(l.data)}${tp !== 'silo' && l.kgUnidade ? ` · ${u.kg(l.kgUnidade)}/u` : ''}</small>
+        <small>${t(tp)}${l.contido ? ` · ${u.esc(l.contido)}` : ''} · ${p ? u.esc(p.nome) : l.parcelaId ? '—' : t('comprado')} · ${u.data(l.data)}${tp !== 'silo' && l.kgUnidade ? ` · ${u.kg(l.kgUnidade)}/u` : ''}</small>
+        ${c.gastoDia(l) && rest ? `<small class="gasto-lote">🔁 ${t('gastoDiaLote', { n: cant(c.gastoDia(l)), un: unidadeGasto(l) })} · ${textoDiasLote(l)}</small>` : ''}
       </div>
       ${visualLote(l)}
-      <div class="lote-num">${tp === 'silo' ? `<b>${u.kg(rest)}</b>` : `<b>${rest}</b>/${c.totalLote(l)}`}</div>
+      <div class="lote-num">${tp === 'silo' ? `<b>${u.kg(rest)}</b>` : `<b>${cant(rest)}</b>/${cant(c.totalLote(l))}`}</div>
       <div class="lote-acc">
         <button class="btn peq" data-accion="lote-menos" data-id="${l.id}" ${rest ? '' : 'disabled'} aria-label="${t('gastar')}">−${textoPaso(l)}</button>
         <button class="btn peq" data-accion="lote-mais" data-id="${l.id}" aria-label="${t('engadir')}">+${textoPaso(l)}</button>
@@ -112,13 +126,13 @@ X.vParcelas = (() => {
   function seccionAlmacen() {
     const lotes = D.lista('lotes').sort((a, b) => (b.data || '').localeCompare(a.data || ''));
     const activos = lotes.filter(l => c.restantes(l) > 0), esgotados = lotes.filter(l => !c.restantes(l));
-    const tot = { alpaca: 0, rolo: 0, microsilo: 0, silo: 0 };
+    const tot = Object.fromEntries(TIPOS.map(tp => [tp, 0]));
     activos.forEach(l => { tot[c.tipoLote(l)] += c.restantes(l); });
     const totais = TIPOS.filter(tp => tot[tp] > 0);
     return `<section class="seccion-parcelas" id="almacen">
       <div class="seccion-cab"><h2>🏚️ ${t('almacen')}</h2>
         <button class="btn" data-accion="novo-lote">${ui.ic('plus')}<span>${t('engadirLote')}</span></button></div>
-      ${totais.length ? `<div class="totais">${totais.map(tp => `<div class="total">${iconaUnidade(tp)}<b>${tp === 'silo' ? u.kg(tot[tp]) : tot[tp]}</b><span>${t(PLURAL[tp])}</span></div>`).join('')}</div>` : ''}
+      ${totais.length ? `<div class="totais">${totais.map(tp => `<div class="total">${iconaUnidade(tp)}<b>${tp === 'silo' ? u.kg(tot[tp]) : cant(tot[tp])}</b><span>${t(PLURAL[tp])}</span></div>`).join('')}</div>` : ''}
       ${activos.length ? `<div class="lotes">${activos.map(filaLote).join('')}</div>` : `<p class="nota">${t('almacenBaleiro')}</p>`}
       ${esgotados.length ? `<details class="grupo"><summary><h3>${t('esgotados')} <span class="conta">${esgotados.length}</span></h3></summary><div class="lotes">${esgotados.map(filaLote).join('')}</div></details>` : ''}
     </section>`;
@@ -174,12 +188,13 @@ X.vParcelas = (() => {
         <section class="seccion"><h3>${t('colleitas')}</h3>
           ${lotes.length ? `<div class="lotes">${lotes.map(filaLote).join('')}</div>` : `<p class="nota">${t('senColleitas')}</p>`}</section>`;
     } else {
-      const an = c.animaisParcela(p).sort(u.porNome), cons = c.consumo(p), b = (+p.crecemento || 0) - cons;
+      const an = c.animaisParcela(p).sort(u.porNome), cons = c.consumo(p), ap = c.aporte(p), b = c.balance(p);
       const bloques = X.vGrupos.repartir(an);
       corpo = `<dl class="datos">
           ${p.superficie ? fila(t('superficie'), `${u.numero(p.superficie, 2)} ha`) : ''}
           ${fila(t('stockActual'), `<b>${u.kg(n.s)}</b>${isFinite(n.cap) ? ` / ${u.kg(n.cap)}` : ''}`)}
           ${fila(t('crecemento'), `+${u.kg(+p.crecemento || 0)}/${t('dia')}`)}
+          ${ap ? fila(t('doAlmacen'), `+${u.kg(ap)}/${t('dia')}`) : ''}
           ${fila(t('consumo'), `−${u.kg(cons)}/${t('dia')}`)}
           ${fila(t('balance'), `<b class="${b < 0 ? 'neg' : 'pos'}">${signo(b)}/${t('dia')}</b>`)}
           ${fila(t('prevision'), textoPrevision(n.pr))}
@@ -197,7 +212,8 @@ X.vParcelas = (() => {
             <button class="btn-icono peq" data-accion="quitar-animal" data-id="${a.id}" aria-label="${t('quitar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`).join('')
           : `<p class="nota">${t('senAnimaisParcela')}</p>`}
           <div class="botons"><button class="btn primario" data-accion="asignar" data-id="${p.id}">${ui.ic('plus')}<span>${t('asignarAnimais')}</span></button></div>
-        </section>`;
+        </section>
+        ${seccionGastos(p)}`;
       // Lotes que saíron desta parcela cando se colleitaba
       const lotes = D.lista('lotes').filter(l => l.parcelaId === p.id).sort((a, b) => b.data.localeCompare(a.data));
       if (lotes.length) corpo += `<section class="seccion"><h3>${t('colleitas')}</h3><div class="lotes">${lotes.map(filaLote).join('')}</div></section>`;
@@ -211,6 +227,80 @@ X.vParcelas = (() => {
   }
 
   const verFicha = id => ui.modal.mostrar(() => ficha(id));
+
+  // ---------- Gasto diario do almacén ----------
+  // Cada pasto pode gastar cada día unha cantidade fixa dun ou varios lotes (p. ex. 3 alpacas de "Herba 2025").
+  // Gárdase no lote (lote.gastos) e descóntase só; os kg súmanse á comida da parcela.
+  function seccionGastos(p) {
+    const gastos = c.lotesParcela(p);
+    return `<section class="seccion"><h3>🏚️ ${t('gastoDiario')}</h3>
+      ${gastos.length ? `<ul class="lista-gastos">${gastos.map(({ l, n }) => {
+        const tp = c.tipoLote(l), kg = n * c.kgPorUnidade(l), rest = c.restantes(l);
+        return `<li class="${rest ? '' : 'esgotado'}">
+          <span class="lote-icona peq">${iconaUnidade(tp)}</span>
+          <button class="enlace txt" data-accion="ver-lote" data-id="${l.id}"><b>${u.esc(nomeLote(l))}</b>
+            <small>${t('gastoDiaLote', { n: cant(n), un: unidadeGasto(l) })}${tp !== 'silo' && kg ? ` · ${u.kg(kg)}/${t('dia')}` : ''} · ${rest ? textoDiasLote(l) : `<span class="vermello">${t('esgotado')}</span>`}</small></button>
+          <button class="btn-icono peq" data-accion="editar-gasto" data-id="${p.id}" data-lote="${l.id}" aria-label="${t('editar')}">${ui.ic('edit')}</button>
+          <button class="btn-icono peq" data-accion="quitar-gasto" data-id="${p.id}" data-lote="${l.id}" aria-label="${t('quitar')}">${ui.ic('x')}</button></li>`;
+      }).join('')}</ul>` : `<p class="nota">${t('senGastoDiario')}</p>`}
+      ${gastos.some(({ l }) => c.tipoLote(l) !== 'silo' && !l.kgUnidade) ? `<p class="nota">${t('notaKgUnidadeGasto')}</p>` : ''}
+      <div class="botons"><button class="btn" data-accion="novo-gasto" data-id="${p.id}">${ui.ic('plus')}<span>${t('engadirGasto')}</span></button></div>
+    </section>`;
+  }
+
+  // Cambia os gastos dun lote. Antes pecha o que se levaba gastado (consumo do lote e comida das parcelas)
+  // para que o cambio só conte desde hoxe.
+  function cambiarGastos(l, gastos) {
+    const hoxe = u.hoxe();
+    const afectadas = new Set([...(l.gastos || []), ...gastos].map(g => g.parcelaId));
+    for (const id of afectadas) {
+      const p = D.obter('parcelas', id);
+      if (p && p.tipo !== 'forraxe') D.gardar('parcelas', c.checkpoint(p));
+    }
+    const auto = c.gastoAutomatico(l), consumos = [...(l.consumos || [])];
+    if (auto > 0) consumos.push({ data: hoxe, n: Math.round(auto * 1000) / 1000, auto: true });
+    D.gardar('lotes', { ...l, consumos, gastos: gastos.filter(g => +g.n > 0), gastoDesde: hoxe });
+  }
+  const sen = (l, parcelaId) => (l.gastos || []).filter(g => g.parcelaId !== parcelaId);
+
+  function formGasto(p, l) {
+    // Lotes con existencias (e o que xa ten, aínda que estea esgotado)
+    const lotes = D.lista('lotes').filter(x => c.restantes(x) > 0 || (l && x.id === l.id)).sort((a, b) => nomeLote(a).localeCompare(nomeLote(b)));
+    const n = l ? (l.gastos || []).filter(g => g.parcelaId === p.id).reduce((s, g) => s + +g.n, 0) : '';
+    return `<form data-form="gasto" data-id="${p.id}" data-lote="${l ? l.id : ''}" class="modal-form peq">
+      ${ui.cab(l ? t('editarGasto') : t('engadirGasto'), true)}
+      <div class="modal-corpo"><p class="nota">${t('axudaGastoDiario')}</p>
+        ${lotes.length ? `${ui.campo(t('lote') + ' *', ui.selector('lote', lotes.map(x => [x.id,
+            `${nomeLote(x)} · ${t(c.tipoLote(x))}${x.contido ? ` (${x.contido})` : ''} · ${t('quedan', { n: c.tipoLote(x) === 'silo' ? u.kg(c.restantes(x)) : cant(c.restantes(x)) })}`]),
+            l ? l.id : '', 'required'))}
+          ${ui.campo(t('cantidadeDia') + ' *', ui.numero('n', n, 'step="any" min="0.01" required autofocus'), t('axudaCantidadeDia'))}`
+        : `<p class="nota">${t('senLotesGasto')}</p>`}
+      </div>
+      ${ui.pe(ui.btnCancelar() + (lotes.length ? ui.btnGardar() : ''))}</form>`;
+  }
+
+  X.accions['novo-gasto'] = el => ui.modal.abrir(formGasto(D.obter('parcelas', el.dataset.id), null), { volver: () => verFicha(el.dataset.id) });
+  X.accions['editar-gasto'] = el => ui.modal.abrir(formGasto(D.obter('parcelas', el.dataset.id), D.obter('lotes', el.dataset.lote)), { volver: () => verFicha(el.dataset.id) });
+  X.formularios.gasto = form => {
+    const f = new FormData(form), p = D.obter('parcelas', form.dataset.id);
+    const n = u.num(f.get('n')), loteId = f.get('lote'), antes = form.dataset.lote;
+    if (!(n > 0)) { ui.toast(t('faltaCantidade'), 'erro'); return; }
+    D.lote(() => {
+      // Se se cambiou de lote, quítase do anterior
+      if (antes && antes !== loteId) { const vello = D.obter('lotes', antes); if (vello) cambiarGastos(vello, sen(vello, p.id)); }
+      const l = D.obter('lotes', loteId);
+      cambiarGastos(l, [...sen(l, p.id), { parcelaId: p.id, n }]);
+    });
+    ui.toast(t('gardado'), 'ok');
+    verFicha(p.id);
+  };
+  X.accions['quitar-gasto'] = el => {
+    const l = D.obter('lotes', el.dataset.lote);
+    if (l) cambiarGastos(l, sen(l, el.dataset.id));
+  };
+
+  // Ao borrar unha parcela ou pasala a Silo/Alpacas, deixa de gastar do almacén
+  const quitarGastosParcela = id => D.lista('lotes').filter(l => (l.gastos || []).some(g => g.parcelaId === id)).forEach(l => cambiarGastos(l, sen(l, id)));
 
   // ---------- Formulario ----------
   const opcionsTipo = () => TIPOS.map(tp => [tp, t(tp)]);
@@ -289,6 +379,7 @@ X.vParcelas = (() => {
     };
     D.lote(() => {
       an.forEach(a => D.gardar('animais', { ...a, parcelaId: null }));
+      if (prev && tipo === 'forraxe') quitarGastosParcela(id);
       D.gardar('parcelas', p);
     });
     const nActivos = an.filter(c.activo).length;
@@ -309,6 +400,7 @@ X.vParcelas = (() => {
     if (!await ui.confirmar(t('confBorrarParcela', { nome: p.nome }), { aceptar: t('eliminar'), perigo: true })) return;
     D.lote(() => {
       D.lista('animais').filter(a => a.parcelaId === p.id).forEach(a => D.gardar('animais', { ...a, parcelaId: null }));
+      quitarGastosParcela(p.id);
       D.borrar('parcelas', p.id);
     });
     ui.modal.pechar();
@@ -402,6 +494,8 @@ X.vParcelas = (() => {
   const camposLote = l => `
     ${ui.campo(t('nome') + ' *', ui.entrada('nome', l.nome, `required autocomplete="off" placeholder="${t('exemploLote')}"`))}
     ${ui.campo(t('tipoUnidade'), selectorTipoLote(c.tipoLote(l)))}
+    ${ui.campo(t('contido'), ui.entrada('contido', l.contido, 'list="contidosLote" autocomplete="off"')
+      + `<datalist id="contidosLote">${CONTIDOS.map(k => `<option value="${u.esc(t(k))}">`).join('')}</datalist>`, t('axudaContido'))}
     <div class="grella-campos">
       ${ui.campo(t('unidades') + ' *', ui.numero('unidades', l.unidades, 'step="1"'), '', 'so-unidades')}
       ${ui.campo(t('kgUnidade'), ui.numero('kgUnidade', l.kgUnidade), '', 'so-unidades')}
@@ -418,7 +512,7 @@ X.vParcelas = (() => {
     if (!silo && !(unidades >= 0 && f.get('unidades') !== '')) { ui.toast(t('faltanUnidades'), 'erro'); return null; }
     if (silo && !(kg > 0)) { ui.toast(t('faltanKg'), 'erro'); return null; }
     return {
-      nome: (f.get('nome') || '').trim(), tipo,
+      nome: (f.get('nome') || '').trim(), tipo, contido: (f.get('contido') || '').trim() || null,
       unidades: silo ? null : unidades, kgUnidade: silo ? null : u.num(f.get('kgUnidade')),
       kg: silo ? kg : null, paso: silo ? (u.num(f.get('paso')) || 100) : null,
     };
@@ -478,13 +572,17 @@ X.vParcelas = (() => {
     const tp = c.tipoLote(l), silo = tp === 'silo', p = D.obter('parcelas', l.parcelaId), rest = c.restantes(l);
     const un = silo ? ' kg' : '';
     const cons = [...(l.consumos || [])].map((x, i) => ({ ...x, i })).sort((a, b) => b.data.localeCompare(a.data));
+    const gastos = c.gastosLote(l), auto = c.gastoAutomatico(l);
     return `${ui.cab(`${iconaUnidade(tp)} ${u.esc(nomeLote(l))}`)}
       <div class="modal-corpo ficha">
         <dl class="datos">
           ${fila(t('tipoUnidade'), t(tp))}
+          ${l.contido ? fila(t('contido'), u.esc(l.contido)) : ''}
           ${fila(t('orixe'), p ? u.esc(p.nome) : l.parcelaId ? '—' : t('comprado'))}
           ${fila(t('data'), u.data(l.data))}
-          ${fila(t('restantes'), silo ? `<b>${u.kg(rest)}</b> / ${u.kg(c.totalLote(l))}` : `<b>${rest}</b> / ${c.totalLote(l)}`)}
+          ${fila(t('restantes'), silo ? `<b>${u.kg(rest)}</b> / ${u.kg(c.totalLote(l))}` : `<b>${cant(rest)}</b> / ${cant(c.totalLote(l))}`)}
+          ${gastos.length ? fila(t('gastoDiario'), `${gastos.map(g => `${u.esc(D.obter('parcelas', g.parcelaId).nome)}: ${silo ? u.kg(+g.n) : cant(+g.n)}`).join(' · ')}
+            <br><small>${rest ? textoDiasLote(l) : t('esgotado')}</small>`) : ''}
           ${!silo && l.kgUnidade ? fila(t('kgUnidade'), u.kg(l.kgUnidade)) : ''}
           ${silo ? fila(t('pasoKg'), u.kg(paso(l))) : ''}
           ${l.notas ? fila(t('notas'), u.esc(l.notas)) : ''}
@@ -495,7 +593,9 @@ X.vParcelas = (() => {
           <button class="btn" data-accion="lote-mais" data-id="${l.id}">+${textoPaso(l)}</button>
         </div>
         <section class="seccion"><h3>${t('consumos')}</h3>
-          ${cons.length ? `<ul class="lista-simple">${cons.map(x => `<li><span>${u.data(x.data)}</span><b>${x.n > 0 ? '−' : '+'}${u.numero(Math.abs(x.n), 0)}${un}</b>
+          ${cons.length || auto ? `<ul class="lista-simple">
+            ${auto ? `<li><span>🔁 ${t('gastoDesde', { data: u.data(l.gastoDesde) })}</span><b>−${silo ? u.numero(auto, 0) : cant(auto)}${un}</b><span class="btn-icono peq"></span></li>` : ''}
+            ${cons.map(x => `<li><span>${x.auto ? '🔁 ' : ''}${u.data(x.data)}</span><b>${x.n > 0 ? '−' : '+'}${silo ? u.numero(Math.abs(x.n), 0) : cant(Math.abs(x.n))}${un}</b>
             <button class="btn-icono peq" data-accion="borrar-consumo" data-id="${l.id}" data-i="${x.i}" aria-label="${t('borrar')}">${ui.ic('x')}</button></li>`).join('')}</ul>`
           : `<p class="nota">${t('senConsumos')}</p>`}
         </section>
@@ -538,7 +638,12 @@ X.vParcelas = (() => {
   };
   X.accions['borrar-lote'] = async el => {
     if (!await ui.confirmar(t('confBorrarLote'), { aceptar: t('eliminar'), perigo: true })) return;
-    D.borrar('lotes', el.dataset.id);
+    const l = D.obter('lotes', el.dataset.id);
+    D.lote(() => {
+      // A comida que xa deu ás parcelas queda contada
+      if (c.gastoDia(l)) cambiarGastos(l, []);
+      D.borrar('lotes', l.id);
+    });
     ui.modal.pechar();
   };
   X.accions['lote-menos'] = el => axustarLote(D.obter('lotes', el.dataset.id), -1);

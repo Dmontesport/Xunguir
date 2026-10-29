@@ -33,6 +33,15 @@ X.vConfig = (() => {
       </section>
 
       <section class="tarxeta-config">
+        <h2>${t('perfil')}</h2>
+        <div class="segmentado">
+          ${[['granxeiro', '👨‍🌾'], ['tratante', '🤝']].map(([v, ic]) =>
+            `<label><input type="radio" name="perfil" value="${v}" ${(X.nube.perfil() || 'granxeiro') === v ? 'checked' : ''} data-cambio="perfil"><span>${ic} ${t('perfil_' + v)}</span></label>`).join('')}
+        </div>
+        <p class="nota">${t('notaPerfil')}</p>
+      </section>
+
+      <section class="tarxeta-config">
         <h2>${t('idioma')}</h2>
         <div class="segmentado">
           <label><input type="radio" name="lingua" value="gl" ${X.lang === 'gl' ? 'checked' : ''} data-cambio="lingua"><span>Galego</span></label>
@@ -123,6 +132,11 @@ X.vConfig = (() => {
     try { if (el.value === 'auto') localStorage.removeItem('xunguir.tema'); else localStorage.setItem('xunguir.tema', el.value); } catch { /* sen almacenamento */ }
     if (el.value === 'auto') delete document.documentElement.dataset.tema;
     else document.documentElement.dataset.tema = el.value;
+  };
+
+  X.cambios.perfil = async el => {
+    try { await X.nube.gardarPerfil(el.value); ui.toast(t('gardado'), 'ok'); }
+    catch { ui.toast(t('perfilSenSubir')); }
   };
 
   X.cambios.lingua = el => {

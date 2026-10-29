@@ -9,10 +9,32 @@ X.vMercado = (() => {
   const sb = () => X.nube.cliente();
   const POR_PAXINA = 30, MAX_FOTOS = 5, DIAS_CADUCA = 60;
 
-  const ESPECIES = { vacun: '🐄', ovino: '🐑', caprino: '🐐', porcino: '🐖', equino: '🐎', aves: '🐔', outra: '🐾' };
-  const DIB_A_ESPECIE = { '01': 'equino', '02': 'vacun', '03': 'porcino', '04': 'ovino', '05': 'aves', '06': 'outra' };
-  const CARACTERISTICAS = ['carne', 'leite', 'vida', 'reproducion', 'prenada', 'adsg', 'saneamento', 'electronico', 'dib', 'ecoloxico', 'castrado'];
-  const PROVINCIAS = ['A Coruña', 'Lugo', 'Ourense', 'Pontevedra', 'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila',
+  // Lista común a todos os usuarios (a de Configuración é de cada explotación). 'aves' queda para os anuncios vellos
+  const ESPECIES = {
+    vacun: '🐄', ovino: '🐑', caprino: '🐐', porcino: '🐖', equino: '🐎', asno: '🫏', galina: '🐔', pato: '🦆', pavo: '🦃', aves: '🐦',
+    coello: '🐇', cervo: '🦌', camelido: '🦙', abella: '🐝', can: '🐕', outra: '🐾',
+  };
+  const DIB_A_ESPECIE = { '01': 'equino', '02': 'vacun', '03': 'porcino', '04': 'ovino', '05': 'galina', '06': 'outra' };
+  // Características: as propias de cada especie e despois as comúns
+  const CAR_COMUNS = ['vacinado', 'desparasitado', 'autoctona', 'ecoloxico'];
+  const CAR_AVES = ['ponedora', 'carne', 'campeira', 'reproducion', 'ovosIncubar', 'pitos'];
+  const CAR_EQUIDOS = ['domado', 'montado', 'tiro', 'manso', 'reproducion', 'prenada', 'conCria', 'libroXenealoxico', 'electronico', 'castrado'];
+  const CAR_ESPECIE = {
+    vacun: ['carne', 'leite', 'vida', 'reproducion', 'prenada', 'conCria', 'manso', 'adsg', 'saneamento', 'electronico', 'dib', 'libroXenealoxico', 'castrado'],
+    ovino: ['carne', 'leite', 'vida', 'la', 'reproducion', 'prenada', 'conCria', 'adsg', 'saneamento', 'electronico', 'libroXenealoxico', 'castrado'],
+    caprino: ['carne', 'leite', 'vida', 'reproducion', 'prenada', 'conCria', 'adsg', 'saneamento', 'electronico', 'libroXenealoxico', 'castrado'],
+    porcino: ['ceba', 'reproducion', 'prenada', 'conCria', 'extensivo', 'saneamento', 'libroXenealoxico', 'castrado'],
+    equino: CAR_EQUIDOS, asno: [...CAR_EQUIDOS, 'compania'],
+    galina: CAR_AVES, pato: CAR_AVES, pavo: CAR_AVES, aves: CAR_AVES,
+    coello: ['carne', 'reproducion', 'prenada', 'conCria', 'compania'],
+    cervo: ['carne', 'vida', 'reproducion', 'prenada', 'saneamento', 'electronico'],
+    camelido: ['la', 'compania', 'manso', 'reproducion', 'prenada', 'conCria', 'libroXenealoxico', 'electronico', 'castrado'],
+    abella: ['colmeaCompleta', 'enxame', 'rainaNova', 'nucleo', 'mel'],
+    can: ['gando', 'garda', 'caza', 'adestrado', 'compania', 'cachorro', 'libroXenealoxico', 'electronico', 'castrado'],
+    outra: ['carne', 'leite', 'vida', 'reproducion', 'prenada', 'conCria', 'compania'],
+  };
+  // 'xeral' (filtro sen especie): só as comúns
+  const caracteristicasDe = e => e === 'xeral' ? CAR_COMUNS : [...new Set([...(CAR_ESPECIE[e] || CAR_ESPECIE.outra), ...CAR_COMUNS])];  const PROVINCIAS = ['A Coruña', 'Lugo', 'Ourense', 'Pontevedra', 'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila',
     'Badajoz', 'Barcelona', 'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón', 'Ceuta', 'Ciudad Real', 'Córdoba', 'Cuenca',
     'Girona', 'Granada', 'Guadalajara', 'Gipuzkoa', 'Huelva', 'Huesca', 'Illes Balears', 'Jaén', 'La Rioja', 'Las Palmas', 'León',
     'Lleida', 'Madrid', 'Málaga', 'Melilla', 'Murcia', 'Navarra', 'Palencia', 'Salamanca', 'Santa Cruz de Tenerife', 'Segovia',
@@ -32,6 +54,8 @@ X.vMercado = (() => {
 
   const urlFoto = ruta => sb().storage.from('mercado').getPublicUrl(ruta).data.publicUrl;
   const nomeEspecie = e => t('esp_' + (ESPECIES[e] ? e : 'outra'));
+  // 'aves' (xenérica) só aparece nos anuncios vellos que a teñen
+  const opcionsEspecie = actual => Object.keys(ESPECIES).filter(e => e !== 'aves' || actual === 'aves').map(e => [e, `${ESPECIES[e]} ${nomeEspecie(e)}`]);
   const destacado = a => a.destacado_ata && new Date(a.destacado_ata) > new Date();
   const propio = a => a.vendedor === X.nube.uid();
 
@@ -167,7 +191,7 @@ X.vMercado = (() => {
     if (st.erro) corpo = `<div class="baleiro"><p>${u.esc(st.erro)}</p><button class="btn" data-accion="recargar-mercado">${ui.ic('refresh')}<span>${t('tentarDeNovo')}</span></button></div>`;
     else if (st.cargando && !lista.length) corpo = `<div class="baleiro"><p>${t('cargandoAnuncios')}</p></div>`;
     else if (!lista.length) corpo = st.pestana === 'buscar'
-      ? `<div class="baleiro"><div class="baleiro-ic">🏪</div><p>${nFiltros || st.filtros.q ? t('senAnunciosFiltro') : t('senAnuncios')}</p></div>`
+      ? `<div class="baleiro"><div class="baleiro-ic">⚖️</div><p>${nFiltros || st.filtros.q ? t('senAnunciosFiltro') : t('senAnuncios')}</p></div>`
       : `<div class="baleiro"><div class="baleiro-ic">📣</div><p>${t('senMeusAnuncios')}</p>
           <button class="btn primario" data-accion="publicar-anuncio">${ui.ic('plus')}<span>${t('publicarAnuncio')}</span></button></div>`;
     else corpo = `<div class="grella-anuncios">${lista.map(tarxeta).join('')}</div>
@@ -175,7 +199,7 @@ X.vMercado = (() => {
 
     main.innerHTML = `<div class="mercado">
       <div class="mercado-cab">
-        <h1>🏪 ${t('mercado')}</h1>
+        <h1>⚖️ ${t('mercado')}</h1>
         <button class="btn primario" data-accion="publicar-anuncio">${ui.ic('plus')}<span>${t('publicarAnuncio')}</span></button>
       </div>
       <div class="segmentado subpestanas">
@@ -211,7 +235,8 @@ X.vMercado = (() => {
     const caducaEn = Math.ceil((new Date(a.caduca) - new Date()) / 864e5);
     return `${ui.cab(u.esc(a.titulo))}
       <div class="modal-corpo ficha ficha-anuncio">
-        ${a.fotos && a.fotos.length ? `<div class="carrusel">${a.fotos.map(f => `<img src="${u.esc(urlFoto(f))}" alt="" loading="lazy">`).join('')}</div>`
+        ${a.fotos && a.fotos.length ? `<div class="carrusel-caixa"><div class="carrusel">${a.fotos.map(f => `<img src="${u.esc(urlFoto(f))}" alt="" loading="lazy">`).join('')}</div>
+            ${a.fotos.length > 1 ? `<span class="carrusel-conta">1 / ${a.fotos.length}</span>` : ''}</div>`
           : `<div class="anuncio-foto grande"><span class="ph">${ESPECIES[a.especie] || '🐾'}</span></div>`}
         <div class="prezo-anuncio grande">${textoPrezo(a)}</div>
         ${destacado(a) ? `<span class="selo-destacado estatico">★ ${t('destacado')}</span>` : ''}
@@ -248,6 +273,25 @@ X.vMercado = (() => {
 
   const verFicha = id => ui.modal.mostrar(() => ficha(id));
 
+  // Contador "2 / 5" ao pasar as fotos co dedo
+  document.addEventListener('scroll', e => {
+    const c = e.target;
+    if (!c.classList || !c.classList.contains('carrusel')) return;
+    const conta = c.parentNode.querySelector('.carrusel-conta');
+    if (conta) conta.textContent = `${Math.round(c.scrollLeft / c.clientWidth) + 1} / ${c.children.length}`;
+  }, true);
+
+  // Caixas das características da especie (e as que xa estean marcadas, aínda que sexan doutra)
+  const chipsCaracteristicas = (especie, marcadas) => `<div class="chips-check">${[...new Set([...caracteristicasDe(especie), ...marcadas])].map(k =>
+    `<label><input type="checkbox" name="caracteristicas" value="${k}" ${marcadas.includes(k) ? 'checked' : ''}><span>${t('car_' + k)}</span></label>`).join('')}</div>`;
+  // Ao cambiar a especie no formulario cámbianse as características, conservando as marcadas
+  X.cambios['especie-caracteristicas'] = el => {
+    const caixa = el.form.querySelector('.caixa-caracteristicas');
+    if (!caixa) return;
+    const marcadas = [...caixa.querySelectorAll('input:checked')].map(i => i.value);
+    caixa.innerHTML = chipsCaracteristicas(el.value || 'xeral', marcadas);
+  };
+
   // ---------- Formulario (publicar / editar) ----------
   let fotosForm = []; // [{ ruta } ou { blob, url }]
 
@@ -277,7 +321,7 @@ X.vMercado = (() => {
         <h4>${t('fotos')} <small>(${t('ataN', { n: MAX_FOTOS })})</small></h4>
         <div class="fotos-anuncio">${htmlFotos()}</div>
         <div class="grella-campos">
-          ${ui.campo(t('especie') + ' *', ui.selector('especie', Object.keys(ESPECIES).map(e => [e, `${ESPECIES[e]} ${nomeEspecie(e)}`]), a.especie))}
+          ${ui.campo(t('especie') + ' *', ui.selector('especie', opcionsEspecie(a.especie), a.especie, 'data-cambio="especie-caracteristicas"'))}
           ${ui.campo(t('raza'), ui.entrada('raza', a.raza, 'list="razasMercado" autocomplete="off"') + `<datalist id="razasMercado">${X.razas.lista().map(r => `<option value="${u.esc(r.nome)}">`).join('')}</datalist>`)}
           ${ui.campo(t('sexo'), ui.selector('sexo', [['F', `♀ ${t('femia')}`], ['M', `♂ ${t('macho')}`], ['mixto', `⚥ ${t('mixto')}`]], a.sexo))}
           ${ui.campo(t('nacemento'), ui.dataInp('nacemento', a.nacemento))}
@@ -286,8 +330,7 @@ X.vMercado = (() => {
           ${ui.campo(t('prezo') + ' (€)', ui.numero('prezo', a.prezo))}
           ${ui.campo(t('tipoPrezo'), ui.selector('prezo_tipo', [['unidade', t('porAnimal')], ['lote', t('polLote')], ['convir', t('aConvir')]], a.prezo_tipo))}
         </div>
-        ${ui.campo(t('caracteristicas'), `<div class="chips-check">${CARACTERISTICAS.map(k =>
-          `<label><input type="checkbox" name="caracteristicas" value="${k}" ${(a.caracteristicas || []).includes(k) ? 'checked' : ''}><span>${t('car_' + k)}</span></label>`).join('')}</div>`)}
+        ${ui.campo(t('caracteristicas'), `<div class="caixa-caracteristicas">${chipsCaracteristicas(a.especie, a.caracteristicas || [])}</div>`)}
         ${ui.campo(t('descricion'), `<textarea name="descricion" rows="4" maxlength="3000">${u.esc(a.descricion || '')}</textarea>`)}
         <fieldset><legend>${t('ubicacionContacto')}</legend><div class="grella-campos">
           ${ui.campo(t('provincia') + ' *', ui.selector('provincia', PROVINCIAS.map(p => [p, p]), a.provincia, 'required'))}
@@ -312,6 +355,7 @@ X.vMercado = (() => {
     const especie = ESPECIES[a.especieId] ? a.especieId : DIB_A_ESPECIE[X.razas.codigoEspecie(e)] || 'outra';
     const w = X.calc.peso(a);
     f.elements.especie.value = especie;
+    X.cambios['especie-caracteristicas'](f.elements.especie);
     f.elements.raza.value = a.raza || '';
     f.elements.sexo.value = a.sexo || 'F';
     f.elements.nacemento.value = a.nacemento || '';
@@ -460,7 +504,7 @@ X.vMercado = (() => {
     ui.modal.abrir(`<form data-form="filtros-mercado" class="modal-form">
       ${ui.cab(t('filtros'))}
       <div class="modal-corpo"><div class="grella-campos">
-        ${ui.campo(t('especie'), ui.selector('especie', [['', t('todas')], ...Object.keys(ESPECIES).map(e => [e, `${ESPECIES[e]} ${nomeEspecie(e)}`])], f.especie))}
+        ${ui.campo(t('especie'), ui.selector('especie', [['', t('todas')], ...opcionsEspecie(f.especie)], f.especie, 'data-cambio="especie-caracteristicas"'))}
         ${ui.campo(t('raza'), ui.entrada('raza', f.raza, 'list="razasFiltro" autocomplete="off"') + `<datalist id="razasFiltro">${X.razas.lista().map(r => `<option value="${u.esc(r.nome)}">`).join('')}</datalist>`)}
         ${ui.campo(t('sexo'), ui.selector('sexo', [['', t('todos')], ['F', `♀ ${t('femias')}`], ['M', `♂ ${t('machos')}`], ['mixto', `⚥ ${t('mixto')}`]], f.sexo))}
         ${ui.campo(t('idadeMaxima') + ` (${t('mesesUnidade')})`, ui.numero('idadeMax', f.idadeMax, 'step="1"'))}
@@ -469,8 +513,7 @@ X.vMercado = (() => {
         ${ui.campo(t('provincia'), ui.selector('provincia', [['', t('todas')], ...PROVINCIAS.map(p => [p, p])], f.provincia))}
         ${ui.campo(t('concello'), ui.entrada('concello', f.concello, 'autocomplete="off"'))}
       </div>
-      ${ui.campo(t('caracteristicas'), `<div class="chips-check">${CARACTERISTICAS.map(k =>
-        `<label><input type="checkbox" name="caracteristicas" value="${k}" ${f.caracteristicas.includes(k) ? 'checked' : ''}><span>${t('car_' + k)}</span></label>`).join('')}</div>`)}
+      ${ui.campo(t('caracteristicas'), `<div class="caixa-caracteristicas">${chipsCaracteristicas(f.especie || 'xeral', f.caracteristicas)}</div>`, f.especie ? '' : t('axudaCaracteristicasEspecie'))}
       </div>
       ${ui.pe(`<button type="button" class="btn" data-accion="limpar-filtros-mercado">${t('limparFiltros')}</button><span class="espazo"></span>${ui.btnGardar(t('aplicar'))}`)}
     </form>`);

@@ -34,6 +34,9 @@ X.nube = (() => {
     } catch { sesion = null; }
     sb.auth.onAuthStateChange((evento, s) => { sesion = s; });
     if (sesion) localStorage.setItem(CLAVE_UID, sesion.user.id);
+    // Perfil escollido sen conexión: súbese agora á conta
+    const perfilLocal = sesion && !(sesion.user.user_metadata || {}).perfil && localStorage.getItem(clavePerfil());
+    if (perfilLocal) gardarPerfil(perfilLocal).catch(() => { /* xa se subirá */ });
     // Limpa os restos da ligazón (tokens ou erros) da barra de enderezos
     if (location.hash.includes('access_token') || location.hash.includes('error')) history.replaceState(null, '', location.pathname + location.search);
     return sesion;
@@ -66,6 +69,24 @@ X.nube = (() => {
   async function cambiarContrasinal(contrasinal) {
     const { error } = await sb.auth.updateUser({ password: contrasinal });
     if (error) throw error;
+  }
+
+  // ---------- Perfil: 'granxeiro' ou 'tratante' ----------
+  // Vai na conta (datos do usuario en Supabase), así é o mesmo en todos os dispositivos.
+  // Cópiase tamén aquí para saber cal é sen conexión.
+  const clavePerfil = () => `xunguir.perfil.${(sesion && sesion.user.id) || uidSenConexion()}`;
+  function perfil() {
+    const daConta = sesion && sesion.user.user_metadata && sesion.user.user_metadata.perfil;
+    if (daConta) { localStorage.setItem(clavePerfil(), daConta); return daConta; }
+    return localStorage.getItem(clavePerfil());
+  }
+
+  async function gardarPerfil(valor) {
+    localStorage.setItem(clavePerfil(), valor);
+    if (!sesion) return;
+    const { data, error } = await limite(sb.auth.updateUser({ data: { perfil: valor } }));
+    if (error) throw error;
+    if (data && data.user) sesion = { ...sesion, user: data.user };
   }
 
   async function borrarConta() {
@@ -146,7 +167,7 @@ X.nube = (() => {
   }
 
   return {
-    iniciar, entrar, sair, recuperar, cambiarContrasinal, borrarConta, aceptacions, aceptar,
+    iniciar, entrar, sair, recuperar, cambiarContrasinal, borrarConta, aceptacions, aceptar, perfil, gardarPerfil,
     subir, baixar, subirFoto, baixarFoto, borrarFoto, uidSenConexion, limite, cliente: () => sb,
     enlace, entorno: cfg.nome,
     sesion: () => sesion, uid: () => sesion && sesion.user.id, correo: () => sesion && sesion.user.email,

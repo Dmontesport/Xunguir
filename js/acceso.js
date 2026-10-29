@@ -131,6 +131,29 @@ X.acceso = (() => {
     catch (e) { ui.toast(e.message, 'erro'); }
   };
 
+  // ---------- Perfil (só a primeira vez; despois cámbiase en Configuración) ----------
+  function htmlPerfil() {
+    return `<h2>${t('queEres')}</h2>
+      <p>${t('axudaPerfil')}</p>
+      <div class="opcions-perfil">
+        <button type="button" class="opcion-perfil" data-accion="escoller-perfil" data-perfil="granxeiro">
+          <span class="opcion-ic">👨‍🌾</span><b>${t('perfil_granxeiro')}</b><small>${t('axudaGranxeiro')}</small></button>
+        <button type="button" class="opcion-perfil" data-accion="escoller-perfil" data-perfil="tratante">
+          <span class="opcion-ic">🤝</span><b>${t('perfil_tratante')}</b><small>${t('axudaTratante')}</small></button>
+      </div>`;
+  }
+
+  function pedirPerfil() {
+    return new Promise(res => { seguinte = res; ultimaPantalla = htmlPerfil; pantalla(htmlPerfil()); });
+  }
+
+  X.accions['escoller-perfil'] = async el => {
+    el.disabled = true;
+    // Sen conexión queda gardado neste dispositivo e súbese á conta máis tarde
+    try { await X.nube.gardarPerfil(el.dataset.perfil); } catch { /* xa se subirá */ }
+    rematar();
+  };
+
   X.accions['sair-acceso'] = async () => { await X.nube.sair(); location.reload(); };
 
   X.accions['lingua-acceso'] = el => {
@@ -160,5 +183,5 @@ X.acceso = (() => {
     X.sync.executar();
   }
 
-  return { entrar, pedirContrasinal, aceptar, pecharPantalla, migrar };
+  return { entrar, pedirContrasinal, aceptar, pedirPerfil, pecharPantalla, migrar };
 })();

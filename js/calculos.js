@@ -25,6 +25,7 @@ X.calc = (() => {
   function peso(a, ata) {
     ata = ata || dataFin(a);
     const e = especie(a), A = pesoAdulto(a, e);
+    if (e.crecemento === false) return null;
     const pes = (a.pesaxes || []).filter(p => p.data <= ata).sort((x, y) => x.data < y.data ? -1 : 1);
     let ini = pes.length ? pes[pes.length - 1] : null;
     if (!ini && a.nacemento && a.nacemento <= ata) ini = { data: a.nacemento, kg: a.pesoNacemento || e.pesoNac };
@@ -61,6 +62,7 @@ X.calc = (() => {
   // da curva (ou só manterse, se xa é adulto). Mentres mama non se propón.
   function comidaProposta(a) {
     const e = especie(a), A = pesoAdulto(a, e);
+    if (e.crecemento === false) return null;
     if (a.nacemento && u.entre(a.nacemento, u.hoxe()) < e.destete) return { mama: true, ata: u.sumar(a.nacemento, e.destete) };
     const w = peso({ ...a, comidaDia: null }) ?? A;
     const kg = w * e.mantemento / 100 + potencial(w, A, e) * e.conversion;
@@ -71,6 +73,7 @@ X.calc = (() => {
   function repro(a, hoxe = u.hoxe()) {
     if (a.sexo !== 'F' || !activo(a)) return null;
     const e = especie(a);
+    if (e.repro === false) return null;
     const pariuDespois = a.ultimoParto && a.ultimoParto >= a.cubricion;
     const celoDespois = a.ultimoCelo && a.ultimoCelo > a.cubricion;
     if (a.cubricion && !pariuDespois && !celoDespois) {
@@ -94,36 +97,79 @@ X.calc = (() => {
     return { estado: 'proximo', data: u.deDia(ini), dias: ini - hd };
   }
 
+  // ---- Almacén ----
+  // Tipos de lote: 'alpaca' (cadrada), 'rolo', 'microsilo' (rolo envolto en plástico branco) e 'saco'
+  // contan unidades; 'silo' conta kg.
+  // Os lotes antigos tiñan o tipo en texto libre ("Alpaca", "Bóla de silo", "Rolo"…)
+  const TIPOS_LOTE = ['alpaca', 'rolo', 'microsilo', 'saco', 'silo'];
+  const tipoLote = l => TIPOS_LOTE.includes(l.tipo) ? l.tipo
+    : /saco/i.test(l.tipo || '') ? 'saco' : /bóla|bola|silo/i.test(l.tipo || '') ? 'microsilo' : /rol/i.test(l.tipo || '') ? 'rolo' : 'alpaca';
+  const totalLote = l => tipoLote(l) === 'silo' ? (+l.kg || 0) : (+l.unidades || 0);
+  // Gastado a man (e o gasto diario xa pechado, que se apunta como consumo)
+  const gastadas = l => (l.consumos || []).reduce((s, c) => s + (+c.n || 0), 0);
+  const kgPorUnidade = l => tipoLote(l) === 'silo' ? 1 : (+l.kgUnidade || 0);
+
+  // Gasto diario: cada parcela pode levar unha cantidade fixa ao día dun lote
+  // (lote.gastos = [{ parcelaId, n }]). Non se apunta día a día: calcúlase desde lote.gastoDesde,
+  // e cando cambian os gastos péchase o acumulado como un consumo e empeza de novo.
+  const gastosLote = l => (l.gastos || []).filter(g => +g.n > 0 && X.datos.obter('parcelas', g.parcelaId));
+  const gastoDia = l => gastosLote(l).reduce((s, g) => s + +g.n, 0);
+  const senDiario = l => Math.max(0, totalLote(l) - gastadas(l));
+  function gastoAutomatico(l, ata = u.hoxe()) {
+    const r = gastoDia(l);
+    if (!r || !l.gastoDesde) return 0;
+    return Math.min(senDiario(l), r * Math.max(0, u.entre(l.gastoDesde, ata)));
+  }
+  const restantes = l => Math.max(0, senDiario(l) - gastoAutomatico(l));
+  // Días que lle quedan ao lote co gasto diario actual
+  const diasLote = l => { const r = gastoDia(l); return r > 0 ? restantes(l) / r : Infinity; };
+  // Día (número de día) no que se esgota co gasto diario
+  const finLote = l => { const r = gastoDia(l); return r > 0 && l.gastoDesde ? u.dia(l.gastoDesde) + senDiario(l) / r : null; };
+  // Lotes que dan de comer a unha parcela, coa cantidade diaria
+  const lotesParcela = p => X.datos.lista('lotes').map(l => ({ l, n: gastosLote(l).filter(g => g.parcelaId === p.id).reduce((s, g) => s + +g.n, 0) })).filter(x => x.n > 0);
+
   // ---- Parcelas ----
   const animaisParcela = p => X.datos.lista('animais').filter(a => a.parcelaId === p.id && activo(a));
   const consumo = p => p.tipo === 'forraxe' ? 0 : animaisParcela(p).reduce((s, a) => s + (+a.comidaDia || 0), 0);
-  const balance = p => (+p.crecemento || 0) - consumo(p);
+  // kg/día que achega hoxe o almacén (os lotes esgotados xa non dan)
+  const aporte = p => p.tipo === 'forraxe' ? 0 : lotesParcela(p).reduce((s, x) => s + (restantes(x.l) > 0 ? x.n * kgPorUnidade(x.l) : 0), 0);
+  const balance = p => (+p.crecemento || 0) + aporte(p) - consumo(p);
   const capacidade = p => +p.capacidade > 0 ? +p.capacidade : Infinity;
+
+  // kg achegados polo almacén entre dúas datas (o lote pode esgotarse polo medio)
+  function aporteEntre(p, desde, ata) {
+    const d0 = u.dia(desde), d1 = u.dia(ata);
+    return lotesParcela(p).reduce((s, { l, n }) => {
+      const ini = Math.max(d0, l.gastoDesde ? u.dia(l.gastoDesde) : d1), fin = Math.min(d1, finLote(l) ?? d1);
+      return s + (fin > ini ? (fin - ini) * n * kgPorUnidade(l) : 0);
+    }, 0);
+  }
 
   function stock(p, ata = u.hoxe()) {
     const d = p.stockData ? Math.max(0, u.entre(p.stockData, ata)) : 0;
-    const ritmo = p.tipo === 'forraxe' ? (+p.crecemento || 0) : balance(p);
-    return Math.min(capacidade(p), Math.max(0, (+p.stock || 0) + d * ritmo));
+    if (p.tipo === 'forraxe') return Math.min(capacidade(p), Math.max(0, (+p.stock || 0) + d * (+p.crecemento || 0)));
+    const ritmo = (+p.crecemento || 0) - consumo(p);
+    const extra = p.stockData ? aporteEntre(p, p.stockData, ata) : 0;
+    return Math.min(capacidade(p), Math.max(0, (+p.stock || 0) + d * ritmo + extra));
   }
 
   function prevision(p) {
     const s = stock(p), b = balance(p), cap = capacidade(p);
-    if (b < 0) return { tipo: 'baixa', dias: s / -b, s, b };
+    // Cando se esgote un lote do almacén, o balance baixa: vaise tramo a tramo
+    let dia = 0, sx = s, bx = b;
+    const cortes = lotesParcela(p).filter(x => restantes(x.l) > 0)
+      .map(x => ({ dias: diasLote(x.l), kg: x.n * kgPorUnidade(x.l) })).filter(x => x.kg > 0).sort((a, z) => a.dias - z.dias);
+    for (const tr of cortes) {
+      if (bx < 0 && sx + bx * (tr.dias - dia) <= 0) break;
+      sx = Math.min(cap, Math.max(0, sx + bx * (tr.dias - dia)));
+      dia = tr.dias; bx -= tr.kg;
+    }
+    if (bx < 0) return { tipo: 'baixa', dias: dia + sx / -bx, s, b };
     if (b > 0) return s < cap ? { tipo: 'enche', dias: (cap - s) / b, s, b } : { tipo: 'chea', s, b };
     return { tipo: 'estable', s, b };
   }
 
   const checkpoint = p => ({ ...p, stock: stock(p), stockData: u.hoxe() });
-
-  // ---- Almacén ----
-  // Tipos de lote: 'alpaca' (cadrada), 'rolo' e 'microsilo' (rolo envolto en plástico branco)
-  // contan unidades; 'silo' conta kg.
-  // Os lotes antigos tiñan o tipo en texto libre ("Alpaca", "Bóla de silo", "Rolo"…)
-  const tipoLote = l => ['alpaca', 'rolo', 'microsilo', 'silo'].includes(l.tipo) ? l.tipo
-    : /bóla|bola|silo/i.test(l.tipo || '') ? 'microsilo' : /rol/i.test(l.tipo || '') ? 'rolo' : 'alpaca';
-  const totalLote = l => tipoLote(l) === 'silo' ? (+l.kg || 0) : (+l.unidades || 0);
-  const gastadas = l => (l.consumos || []).reduce((s, c) => s + (+c.n || 0), 0);
-  const restantes = l => Math.max(0, totalLote(l) - gastadas(l));
 
   // ---- Avisos ----
   let cache = { k: null, r: [] };
@@ -171,7 +217,17 @@ X.calc = (() => {
     const lotes = X.datos.lista('lotes').filter(l => tipoLote(l) !== 'silo');
     if (lotes.length) {
       const tot = lotes.reduce((s, l) => s + restantes(l), 0);
-      if (tot < cfg.almacenMin) r.push({ nivel: tot === 0 ? 'alto' : 'medio', ref: { tipo: 'almacen' }, orde: tot, texto: t('avAlmacen', { n: tot }), detalle: t('minimo', { n: cfg.almacenMin }) });
+      if (tot < cfg.almacenMin) r.push({ nivel: tot === 0 ? 'alto' : 'medio', ref: { tipo: 'almacen' }, orde: tot, texto: t('avAlmacen', { n: u.numero(tot, 1) }), detalle: t('minimo', { n: cfg.almacenMin }) });
+    }
+
+    // Lotes con gasto diario: cando se van esgotar (co mesmo marxe que a comida das parcelas)
+    for (const l of X.datos.lista('lotes')) {
+      if (!gastoDia(l)) continue;
+      const nome = l.nome || t(tipoLote(l)), ref = { tipo: 'lote', id: l.id };
+      const parcelas = gastosLote(l).map(g => X.datos.obter('parcelas', g.parcelaId).nome).join(', ');
+      const d = diasLote(l);
+      if (restantes(l) <= 0) r.push({ nivel: 'alto', ref, orde: -1, texto: t('avLoteEsgotado', { nome }), detalle: parcelas });
+      else if (d <= cfg.comida) r.push({ nivel: d <= 1 ? 'alto' : 'medio', ref, orde: d, texto: t('avLoteDias', { nome, dias: d < 1 ? t('menosDunDia') : u.dias(Math.floor(d)) }), detalle: parcelas });
     }
 
     r.sort((a, b) => ORDE[a.nivel] - ORDE[b.nivel] || a.orde - b.orde);
@@ -181,7 +237,7 @@ X.calc = (() => {
 
   return {
     especie, icono, estado, activo, peso, necesidades, comidaProposta, repro,
-    animaisParcela, consumo, balance, capacidade, stock, prevision, checkpoint,
-    tipoLote, totalLote, gastadas, restantes, avisos,
+    animaisParcela, consumo, aporte, balance, capacidade, stock, prevision, checkpoint,
+    TIPOS_LOTE, tipoLote, totalLote, gastadas, kgPorUnidade, gastosLote, gastoDia, gastoAutomatico, restantes, diasLote, lotesParcela, avisos,
   };
 })();

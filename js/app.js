@@ -19,7 +19,7 @@ X.app = (() => {
           <a href="#animais" class="${vista === 'animais' ? 'activa' : ''}">${t('animais')}${ins(nAn)}</a>
           <a href="#parcelas" class="${vista === 'parcelas' ? 'activa' : ''}">${t('parcelas')}${ins(nPa)}</a>
         </nav>
-        <a href="#mercado" class="boton-mercado ${vista === 'mercado' ? 'activa' : ''}">🏪 <span>${t('mercado')}</span></a>
+        <a href="#mercado" class="boton-mercado ${vista === 'mercado' ? 'activa' : ''}">⚖️ <span>${t('mercado')}</span></a>
       </div>
       <div class="accions">
         <button class="btn-icono" id="btnSync" data-accion="sync"></button>
@@ -91,7 +91,8 @@ X.app = (() => {
 
   function navegar() {
     const h = location.hash.slice(1);
-    const nova = VISTAS[h] ? h : 'animais';
+    // Sen pestana na dirección, a de inicio do perfil: tratantes no Mercado, granxeiros en Animais
+    const nova = VISTAS[h] ? h : X.nube.perfil() === 'tratante' ? 'mercado' : 'animais';
     if (nova !== vista) window.scrollTo(0, 0);
     vista = nova;
     // O Mercado leva o seu propio color, para que se note que non é a xestión da explotación
@@ -118,6 +119,7 @@ X.app = (() => {
     const { tipo, id } = el.dataset;
     if (tipo === 'animal') X.vAnimais.verFicha(id);
     else if (tipo === 'parcela') X.vParcelas.verFicha(id);
+    else if (tipo === 'lote') X.vParcelas.verLote(id);
     else if (tipo === 'almacen') {
       ui.modal.pechar();
       if (vista !== 'parcelas') location.hash = '#parcelas';
@@ -243,10 +245,14 @@ X.app = (() => {
 
     // 2. Textos legais aceptados na versión actual
     if (!await X.legal.aceptado().catch(() => !!offline)) await X.acceso.aceptar();
+
+    // 3. A primeira vez: granxeiro ou tratante (decide a pestana coa que se abre)
+    if (!X.nube.perfil()) await X.acceso.pedirPerfil();
     X.acceso.pecharPantalla();
 
-    // 3. Datos deste usuario
+    // 4. Datos deste usuario
     X.datos.cargar(X.nube.uid() || X.nube.uidSenConexion());
+    X.datos.engadirEspeciesNovas();
     listo = true;
     navegar();
     X.sync.executar();

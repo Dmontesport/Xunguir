@@ -427,6 +427,14 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
   background: radial-gradient(circle at 35% 30%, #ffffff 0 30%, #eef0ee 31% 60%, #cfd3cf 61%);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .22);
 }
+/* Saco: arpillera atada por arriba */
+.u-saco {
+  width: 13px; height: 16px; border-radius: 3px 3px 6px 6px;
+  background:
+    linear-gradient(180deg, #a07c43 0 22%, #6f5226 22% 30%, transparent 30%),
+    repeating-linear-gradient(90deg, #d8bd86 0 2px, #c9a970 2px 3px);
+  box-shadow: inset 0 0 0 1px rgba(110, 80, 35, .45);
+}
 .u-silo { width: 13px; height: 16px; border-radius: 6px 6px 2px 2px; background: linear-gradient(90deg, #7d8a6a, #a7b391 45%, #6b7759); }
 .unidade.gastada { background: transparent; box-shadow: inset 0 0 0 1.5px var(--borde); }
 .barra-silo { height: 12px; border-radius: 6px; background: var(--superficie-2); overflow: hidden; }
@@ -442,9 +450,19 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
 form[data-tipo-lote="silo"] .so-unidades { display: none; }
 form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .tipos-lote { flex-wrap: wrap; }
-.tipos-lote label { flex: 1 1 22%; }
+.tipos-lote label { flex: 1 1 18%; }
 .tipos-lote span { gap: 6px; }
-@media (max-width: 520px) { .tipos-lote label { flex-basis: 45%; } }
+@media (max-width: 520px) { .tipos-lote label { flex-basis: 30%; } }
+/* Gasto diario do almacén */
+.gasto-lote { color: var(--azul); }
+.lote-icona.peq { width: 32px; height: 32px; border-radius: 9px; }
+.lote-icona.peq .unidade { transform: scale(1.3); }
+.lista-gastos { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.lista-gastos li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--borde); }
+.lista-gastos li:last-child { border-bottom: 0; }
+.lista-gastos li.esgotado { opacity: .7; }
+.lista-gastos .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; text-align: left; color: var(--texto); text-decoration: none; }
+.lista-gastos .txt small { color: var(--texto-2); }
 .modal-corpo > .campo + .campo, .modal-corpo > .campo + .grella-campos, .modal-corpo > .grella-campos + .grella-campos { margin-top: 12px; }
 
 /* ---------- Modal ---------- */
@@ -556,6 +574,16 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .acceso-marca h1 { flex: 1; font-size: 1.6rem; }
 .acceso-caixa h2 { font-size: 1.2rem; }
 .acceso-form { display: flex; flex-direction: column; gap: 12px; }
+/* Primeira vez: granxeiro ou tratante */
+.opcions-perfil { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opcion-perfil {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 12px; text-align: center; cursor: pointer;
+  border-radius: var(--raio); border: 2px solid var(--borde); background: var(--superficie); color: var(--texto); font: inherit;
+}
+.opcion-perfil:hover, .opcion-perfil:focus-visible { border-color: var(--primario); }
+.opcion-perfil .opcion-ic { font-size: 2.6rem; line-height: 1.1; }
+.opcion-perfil b { font-size: 1.05rem; }
+.opcion-perfil small { color: var(--texto-2); }
 .acceso-form .btn.primario { min-height: 46px; font-size: 1rem; }
 .acceso-form .enlace { align-self: center; font-weight: 500; }
 .acceso-erro { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--vermello-suave); color: var(--vermello); font-weight: 600; }
@@ -589,7 +617,7 @@ body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); 
 .mercado .ferramentas { margin-bottom: 0; }
 .selector-orde { width: auto; min-height: 34px; padding: 4px 10px; border-radius: 99px; flex: none; font-size: .88rem; font-weight: 600; }
 .grella-anuncios { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-@media (max-width: 520px) { .grella-anuncios { grid-template-columns: 1fr 1fr; gap: 10px; } }
+@media (max-width: 520px) { .grella-anuncios { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; } }
 .tarxeta-anuncio {
   background: var(--superficie); border-radius: var(--raio); box-shadow: var(--sombra); overflow: hidden; cursor: pointer;
   border: 1.5px solid transparent; transition: transform .12s;
@@ -612,8 +640,17 @@ body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); 
 }
 .selo-destacado.estatico { position: static; display: inline-block; margin-bottom: 6px; }
 .n-fotos { position: absolute; right: 8px; bottom: 8px; padding: 1px 7px; border-radius: 99px; font-size: .72rem; background: rgba(0, 0, 0, .55); color: #fff; }
-.carrusel { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: var(--raio); }
-.carrusel img { flex: 0 0 100%; aspect-ratio: 4 / 3; object-fit: cover; scroll-snap-align: start; border-radius: var(--raio); background: var(--superficie-2); }
+/* Fotos da ficha: caixa de tamaño fixo (4:3, non máis alta que media pantalla) e a foto encaixada dentro.
+   min-width: 0 evita que a imaxe ocupe o seu tamaño real (as fotos do móbil son moi grandes) */
+.carrusel-caixa { position: relative; }
+.carrusel {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: var(--raio);
+  aspect-ratio: 4 / 3; max-height: 55vh; width: 100%; background: var(--superficie-2); scrollbar-width: none;
+}
+.carrusel::-webkit-scrollbar { display: none; }
+.carrusel img { flex: 0 0 100%; width: 100%; min-width: 0; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
+.carrusel-conta { position: absolute; right: 10px; bottom: 10px; padding: 2px 9px; border-radius: 99px; font-size: .78rem; background: rgba(0, 0, 0, .55); color: #fff; pointer-events: none; }
+.ficha-anuncio .anuncio-foto.grande { max-height: 55vh; }
 .contacto { margin-top: 14px; }
 .contacto .btn { flex: 1; min-height: 46px; font-size: 1rem; text-decoration: none; }
 .btn.whatsapp { background: #25d366; border-color: #25d366; color: #fff; }

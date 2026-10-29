@@ -331,8 +331,9 @@ X.vAnimais = (() => {
       ...prev, especieId: el.especieId.value, sexo,
       nacemento: el.nacemento.value || null, pesoNacemento: u.num(el.pesoNacemento.value),
     });
-    sp.textContent = p.mama ? ` · ${t('propostaMama', { data: u.data(p.ata) })}` : ` · ${t('propostaComida', { kg: u.kg(p.kg), peso: u.kg(p.peso) })}`;
-    if (!inp.dataset.manual) inp.value = p.mama ? '' : p.kg;
+    // Especies sen peso teórico (colmeas): sen proposta
+    sp.textContent = !p ? '' : p.mama ? ` · ${t('propostaMama', { data: u.data(p.ata) })}` : ` · ${t('propostaComida', { kg: u.kg(p.kg), peso: u.kg(p.peso) })}`;
+    if (!inp.dataset.manual) inp.value = !p || p.mama ? '' : p.kg;
   }
   X.cambios['proposta-comida'] = el => proporComida(el.form);
   X.cambios['especie-animal'] = el => {

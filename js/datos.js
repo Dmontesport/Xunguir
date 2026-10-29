@@ -19,7 +19,20 @@ X.datos = (() => {
     { id: 'caprino', codigoDib: '04', icono: '🐐', nome: { gl: 'Caprino', es: 'Caprino' }, ciclo: 21, duracionCelo: 2, xestacion: 150, celoPostParto: 45, pubertade: 240, destete: 90, pesoNac: 3.5, pesoAdultoF: 60, pesoAdultoM: 80, mantemento: 2.2, conversion: 6, k: 0.011 },
     { id: 'porcino', codigoDib: '03', icono: '🐖', nome: { gl: 'Porcino', es: 'Porcino' }, ciclo: 21, duracionCelo: 2, xestacion: 114, celoPostParto: 30, pubertade: 200, destete: 28, pesoNac: 1.4, pesoAdultoF: 250, pesoAdultoM: 300, mantemento: 1, conversion: 3, k: 0.0102 },
     { id: 'equino', codigoDib: '01', icono: '🐎', nome: { gl: 'Equino', es: 'Equino' }, ciclo: 21, duracionCelo: 6, xestacion: 340, celoPostParto: 9, pubertade: 540, destete: 180, pesoNac: 50, pesoAdultoF: 500, pesoAdultoM: 550, mantemento: 1.5, conversion: 9, k: 0.005 },
+    // Engadidas na versión 2.3.0 (ás explotacións que xa existían engádense ao abrir)
+    // repro: false → sen celos nin partos (aves e abellas); crecemento: false → sen peso teórico (colmeas)
+    { id: 'asno', codigoDib: '01', icono: '🫏', nome: { gl: 'Asno / burro', es: 'Asno / burro' }, ciclo: 23, duracionCelo: 6, xestacion: 365, celoPostParto: 9, pubertade: 730, destete: 180, pesoNac: 30, pesoAdultoF: 300, pesoAdultoM: 330, mantemento: 1.8, conversion: 9, k: 0.005 },
+    { id: 'galina', codigoDib: '05', icono: '🐔', iconoM: '🐓', nome: { gl: 'Galiñas', es: 'Gallinas' }, repro: false, ciclo: 1, duracionCelo: 1, xestacion: 21, celoPostParto: 1, pubertade: 140, destete: 0, pesoNac: 0.04, pesoAdultoF: 2.2, pesoAdultoM: 3, mantemento: 5, conversion: 2.5, k: 0.035 },
+    { id: 'pato', codigoDib: '05', icono: '🦆', nome: { gl: 'Patos', es: 'Patos' }, repro: false, ciclo: 1, duracionCelo: 1, xestacion: 28, celoPostParto: 1, pubertade: 180, destete: 0, pesoNac: 0.05, pesoAdultoF: 3, pesoAdultoM: 3.5, mantemento: 5, conversion: 3, k: 0.04 },
+    { id: 'pavo', codigoDib: '05', icono: '🦃', nome: { gl: 'Pavos', es: 'Pavos' }, repro: false, ciclo: 1, duracionCelo: 1, xestacion: 28, celoPostParto: 1, pubertade: 210, destete: 0, pesoNac: 0.06, pesoAdultoF: 8, pesoAdultoM: 15, mantemento: 4, conversion: 3, k: 0.02 },
+    { id: 'coello', codigoDib: '06', icono: '🐇', nome: { gl: 'Coellos', es: 'Conejos' }, ciclo: 16, duracionCelo: 2, xestacion: 31, celoPostParto: 11, pubertade: 150, destete: 30, pesoNac: 0.06, pesoAdultoF: 4.5, pesoAdultoM: 4.5, mantemento: 4, conversion: 3.5, k: 0.025 },
+    { id: 'cervo', codigoDib: '06', icono: '🦌', nome: { gl: 'Cervos', es: 'Ciervos' }, ciclo: 18, duracionCelo: 1, xestacion: 233, celoPostParto: 120, pubertade: 480, destete: 120, pesoNac: 9, pesoAdultoF: 100, pesoAdultoM: 180, mantemento: 2.5, conversion: 7, k: 0.006 },
+    { id: 'camelido', codigoDib: '06', icono: '🦙', nome: { gl: 'Alpacas e llamas', es: 'Alpacas y llamas' }, ciclo: 14, duracionCelo: 3, xestacion: 345, celoPostParto: 15, pubertade: 540, destete: 180, pesoNac: 8, pesoAdultoF: 65, pesoAdultoM: 75, mantemento: 1.8, conversion: 8, k: 0.006 },
+    { id: 'abella', codigoDib: '06', icono: '🐝', nome: { gl: 'Abellas (colmeas)', es: 'Abejas (colmenas)' }, repro: false, crecemento: false, ciclo: 1, duracionCelo: 1, xestacion: 1, celoPostParto: 1, pubertade: 1, destete: 0, pesoNac: 1, pesoAdultoF: 1, pesoAdultoM: 1, mantemento: 0, conversion: 1, k: 0.01 },
+    { id: 'can', codigoDib: '06', icono: '🐕', nome: { gl: 'Cans de traballo', es: 'Perros de trabajo' }, ciclo: 180, duracionCelo: 9, xestacion: 63, celoPostParto: 120, pubertade: 300, destete: 56, pesoNac: 0.4, pesoAdultoF: 25, pesoAdultoM: 30, mantemento: 3, conversion: 4, k: 0.012 },
   ];
+  // Especies predefinidas que se engadiron despois de crear a explotación
+  const PRESETS_V = 2;
   const AVISOS_DEF = { celo: 3, parto: 7, comida: 3, colleita: 7, almacenMin: 5, chea: true };
   // Valores por hectárea para propoñer capacidade e crecemento (kg de materia seca)
   const PARCELAS_DEF = { kgHa: 3000, crecHa: 30 };
@@ -46,7 +59,7 @@ X.datos = (() => {
 
   const novo = () => ({
     v: 1,
-    config: { avisos: { ...AVISOS_DEF }, upd: 0 },
+    config: { avisos: { ...AVISOS_DEF }, presetsV: PRESETS_V, upd: 0 },
     especies: PRESETS.map(p => ({ ...p, nome: p.nome[X.lang] || p.nome.gl, upd: 0 })),
     animais: [], parcelas: [], lotes: [],
   });
@@ -132,6 +145,18 @@ X.datos = (() => {
     estado.config = { ...estado.config, ...cfg, upd: Date.now() };
     pendentes.add('config:config');
     cambiado();
+  }
+
+  // Unha soa vez por explotación: engade as especies predefinidas novas que non teña
+  // (se se borrou unha despois, non volve aparecer)
+  function engadirEspeciesNovas() {
+    if ((estado.config.presetsV || 1) >= PRESETS_V) return;
+    lote(() => {
+      for (const p of PRESETS) {
+        if (!estado.especies.some(e => e.id === p.id)) gardar('especies', { ...p, nome: p.nome[X.lang] || p.nome.gl });
+      }
+      gardarConfig({ presetsV: PRESETS_V });
+    });
   }
 
   // ---- Sincronización co servidor ----
@@ -242,7 +267,7 @@ X.datos = (() => {
   }
 
   return {
-    PRESETS, RAZAS_DEF, COLECCIONS, cargar, lista, obter, gardar, borrar, gardarAnimal, gardarConfig, lote,
+    PRESETS, RAZAS_DEF, COLECCIONS, cargar, lista, obter, gardar, borrar, gardarAnimal, gardarConfig, lote, engadirEspeciesNovas,
     cambiosPendentes, confirmarSubidos, aplicarRemotos, ultimaSync, gardarUltimaSync, marcarTodoPendente,
     fusionar, substituir, estadoVello, arquivarVello, borrarLocal,
     nPendentes: () => pendentes.size, listo: () => !!estado,
