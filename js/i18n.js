@@ -1,7 +1,8 @@
 'use strict';
 window.X = window.X || {};
 
-// Textos da interface. Engadir unha clave nova nos dous idiomas.
+// Textos da interface. Engadir unha clave nova aquí (gl e es) e en js/i18n-eu/ca/va/ast.js
+// (se falta nalgún deses, móstrase en castelán).
 X.i18n = {
   gl: {
     // Xeral
@@ -498,15 +499,30 @@ X.i18n = {
 
 X.lang = 'gl';
 
+// Idiomas: [código, nome no propio idioma, locale para datas e números].
+// Os textos de eu/ca/va/ast están en js/i18n-<código>.js
+X.LINGUAS = [
+  ['gl', 'Galego', 'gl-ES'], ['es', 'Castellano', 'es-ES'], ['eu', 'Euskara', 'eu-ES'],
+  ['ca', 'Català', 'ca-ES'], ['va', 'Valencià', 'ca-ES-valencia'], ['ast', 'Asturianu', 'ast-ES'],
+];
+// Se a un idioma lle falta un texto, búscase nestes (e ao final en galego)
+const RESERVA = { va: ['va', 'ca', 'es'], ca: ['ca', 'es'], eu: ['eu', 'es'], ast: ['ast', 'es'], es: ['es'] };
+const orde = () => [...(RESERVA[X.lang] || [X.lang]), 'gl'];
+// O valor dun obxecto { gl, es, … } no idioma escollido
+X.enLingua = o => { for (const l of orde()) if (o && o[l] != null) return o[l]; };
+X.locale = () => {
+  const l = X.LINGUAS.find(x => x[0] === X.lang);
+  // Se o navegador non coñece o locale (p. ex. asturiano), as datas saen en castelán
+  return l && Intl.DateTimeFormat.supportedLocalesOf(l[2]).length ? l[2] : X.lang === 'gl' ? 'gl-ES' : 'es-ES';
+};
+
 X.t = (k, vars) => {
-  const d = X.i18n[X.lang] || X.i18n.gl;
-  let s = d[k] ?? X.i18n.gl[k] ?? k;
+  let s;
+  for (const l of orde()) if ((s = X.i18n[l] && X.i18n[l][k]) != null) break;
+  if (s == null) s = k;
   if (vars) s = s.replace(/\{(\w+)\}/g, (m, n) => vars[n] ?? m);
   return s;
 };
 
 // Plural sinxelo: usa `clave1` cando n é 1
-X.tp = (k, n, vars = {}) => {
-  const d = X.i18n[X.lang] || X.i18n.gl;
-  return X.t(Math.abs(n) === 1 && (d[k + '1'] || X.i18n.gl[k + '1']) ? k + '1' : k, { n, ...vars });
-};
+X.tp = (k, n, vars = {}) => X.t(Math.abs(n) === 1 && orde().some(l => X.i18n[l] && X.i18n[l][k + '1']) ? k + '1' : k, { n, ...vars });

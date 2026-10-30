@@ -8,7 +8,7 @@ X.vConfig = (() => {
   function estadoSync() {
     const s = X.sync.st;
     if (!X.nube.sesion()) return `<p class="estado-sync pendente">${ui.ic('cloudOff')} ${t('senConexionConta')}</p>`;
-    const txt = { ok: t('syncOk', { h: s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '' }), pendente: t('syncPendente'), sincronizando: s.msg || t('syncEnCurso'), erro: t('syncErro', { msg: s.msg }), local: t('syncLocal') }[s.estado];
+    const txt = { ok: t('syncOk', { h: s.ultima ? s.ultima.toLocaleTimeString(X.locale(), { hour: '2-digit', minute: '2-digit' }) : '' }), pendente: t('syncPendente'), sincronizando: s.msg || t('syncEnCurso'), erro: t('syncErro', { msg: s.msg }), local: t('syncLocal') }[s.estado];
     return `<p class="estado-sync ${s.estado}">${ui.ic(s.estado === 'erro' ? 'alert' : 'cloud')} ${u.esc(txt)}</p>`;
   }
 
@@ -43,9 +43,8 @@ X.vConfig = (() => {
 
       <section class="tarxeta-config">
         <h2>${t('idioma')}</h2>
-        <div class="segmentado">
-          <label><input type="radio" name="lingua" value="gl" ${X.lang === 'gl' ? 'checked' : ''} data-cambio="lingua"><span>${ui.bandeira('gl')} Galego</span></label>
-          <label><input type="radio" name="lingua" value="es" ${X.lang === 'es' ? 'checked' : ''} data-cambio="lingua"><span>${ui.bandeira('es')} Castellano</span></label>
+        <div class="segmentado linguas">
+          ${X.LINGUAS.map(([l, nome]) => `<label><input type="radio" name="lingua" value="${l}" ${X.lang === l ? 'checked' : ''} data-cambio="lingua"><span>${ui.bandeira(l)} ${nome}</span></label>`).join('')}
         </div>
         <h2 class="subtitulo-config">${t('tema')}</h2>
         <div class="segmentado">

@@ -85,14 +85,21 @@ X.vMercado = (() => {
     return 2 * R * Math.asin(Math.sqrt(h));
   }
 
-  function textoPrezo(a) {
-    if (a.prezo_tipo === 'convir' || a.prezo == null) return t('aConvir');
-    const p = (+a.prezo).toLocaleString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: a.prezo % 1 ? 2 : 0 });
-    if (a.prezo_tipo === 'lote') return `${p} · ${t('oLote')}`;
-    if (a.prezo_tipo === 'kg') return `${p} / kg`;
-    if (almacen(a)) return a.especie === 'outro' ? p : `${p} / ${nomeTipo(a.especie).toLowerCase()}`;
-    return a.cantidade > 1 ? `${p} / ${t('animal')}` : p;
+  // [prezo, unidade] → "1.450 €", "/ alpaca"
+  function partesPrezo(a) {
+    if (a.prezo_tipo === 'convir' || a.prezo == null) return [t('aConvir'), ''];
+    const p = (+a.prezo).toLocaleString(X.locale(), { style: 'currency', currency: 'EUR', maximumFractionDigits: a.prezo % 1 ? 2 : 0 });
+    if (a.prezo_tipo === 'lote') return [p, `· ${t('oLote')}`];
+    if (a.prezo_tipo === 'kg') return [p, '/ kg'];
+    if (almacen(a)) return [p, a.especie === 'outro' ? '' : `/ ${nomeTipo(a.especie).toLowerCase()}`];
+    return [p, a.cantidade > 1 ? `/ ${t('animal')}` : ''];
   }
+  const textoPrezo = a => partesPrezo(a).filter(Boolean).join(' ');
+  // Etiqueta inclinada do prezo, coa unidade en pequeno debaixo
+  const etiquetaPrezo = (a, cls = '') => {
+    const [p, un] = partesPrezo(a);
+    return `<span class="etiqueta-prezo ${cls}"><b>${p}</b>${un ? `<small>${u.esc(un)}</small>` : ''}</span>`;
+  };
 
   const textoSexo = s => s === 'F' ? `♀ ${t('femia')}` : s === 'M' ? `♂ ${t('macho')}` : s === 'mixto' ? `⚥ ${t('mixto')}` : '';
 
@@ -174,24 +181,26 @@ X.vMercado = (() => {
     return l.sort((a, b) => (destacado(b) ? 1 : 0) - (destacado(a) ? 1 : 0));
   }
 
-  // Debuxo cando o anuncio non ten foto
-  const phAnuncio = a => almacen(a) ? `<span class="ph-almacen">${iconaTipo(a.especie)}</span>` : ESPECIES[a.especie] || '🐾';
+  // Debuxo cando o anuncio non ten foto: a icona do Mercado
+  const phAnuncio = () => ui.iconaMercado('ph-mercado');
+  const MAX_CHIPS = 3;
 
   function tarxeta(a) {
-    const km = distancia(a), foto = a.fotos && a.fotos[0];
+    const km = distancia(a), foto = a.fotos && a.fotos[0], car = a.caracteristicas || [];
     const meta = (almacen(a)
       ? [`${iconaTipo(a.especie)} ${u.esc(a.contido || nomeTipo(a.especie))}`, textoCantidade(a), a.ano_colleita || '']
       : [ESPECIES[a.especie] ? `${ESPECIES[a.especie]} ${u.esc(a.raza || nomeEspecie(a.especie))}` : u.esc(a.raza || ''),
         textoSexo(a.sexo), a.nacemento ? u.idade(a.nacemento) : '', a.cantidade > 1 ? X.tp('nAnimais', a.cantidade) : '']).filter(Boolean).join(' · ');
     return `<article class="tarxeta-anuncio ${destacado(a) ? 'destacado' : ''} ${a.estado !== 'activo' ? 'inactivo' : ''}" data-accion="ver-anuncio" data-id="${a.id}" tabindex="0">
-      <div class="anuncio-foto">${foto ? `<img src="${u.esc(urlFoto(foto))}" alt="" loading="lazy" draggable="false">` : `<span class="ph">${phAnuncio(a)}</span>`}
+      <div class="anuncio-foto">${foto ? `<img src="${u.esc(urlFoto(foto))}" alt="" loading="lazy" draggable="false">` : `<span class="ph">${phAnuncio()}</span>`}
         ${destacado(a) ? `<span class="selo-destacado">★ ${t('destacado')}</span>` : ''}
         ${a.estado !== 'activo' ? `<span class="cinta">${t('estadoAnuncio_' + a.estado)}</span>` : ''}
-        ${a.fotos && a.fotos.length > 1 ? `<span class="n-fotos">📷 ${a.fotos.length}</span>` : ''}</div>
+        ${a.fotos && a.fotos.length > 1 ? `<span class="n-fotos">📷 ${a.fotos.length}</span>` : ''}
+        ${etiquetaPrezo(a)}</div>
       <div class="info">
-        <div class="prezo-anuncio">${textoPrezo(a)}</div>
         <h3>${u.esc(a.titulo)}</h3>
         <div class="sub">${meta}</div>
+        ${car.length ? `<div class="chips-anuncio">${car.slice(0, MAX_CHIPS).map(k => `<span>${t('car_' + k)}</span>`).join('')}${car.length > MAX_CHIPS ? `<span>+${car.length - MAX_CHIPS}</span>` : ''}</div>` : ''}
         <div class="lugar">📍 ${u.esc([a.concello, a.provincia].filter(Boolean).join(', '))}${km != null ? ` · ${t('aKm', { km: Math.round(km) })}` : ''}</div>
       </div>
     </article>`;
@@ -222,7 +231,7 @@ X.vMercado = (() => {
     if (st.erro) corpo = `<div class="baleiro"><p>${u.esc(st.erro)}</p><button class="btn" data-accion="recargar-mercado">${ui.ic('refresh')}<span>${t('tentarDeNovo')}</span></button></div>`;
     else if (st.cargando && !lista.length) corpo = `<div class="baleiro"><p>${t('cargandoAnuncios')}</p></div>`;
     else if (!lista.length) corpo = st.pestana === 'buscar'
-      ? `<div class="baleiro"><div class="baleiro-ic">⚖️</div><p>${nFiltros || st.filtros.q ? t('senAnunciosFiltro') : t('senAnuncios')}</p></div>`
+      ? `<div class="baleiro"><div class="baleiro-ic">${ui.iconaMercado()}</div><p>${nFiltros || st.filtros.q ? t('senAnunciosFiltro') : t('senAnuncios')}</p></div>`
       : `<div class="baleiro"><div class="baleiro-ic">📣</div><p>${t('senMeusAnuncios')}</p>
           <button class="btn primario" data-accion="publicar-anuncio">${ui.ic('plus')}<span>${t('publicarAnuncio')}</span></button></div>`;
     else corpo = `<div class="grella-anuncios">${lista.map(tarxeta).join('')}</div>
@@ -230,7 +239,7 @@ X.vMercado = (() => {
 
     main.innerHTML = `<div class="mercado">
       <div class="mercado-cab">
-        <h1>⚖️ ${t('mercado')}</h1>
+        <h1>${ui.iconaMercado()} ${t('mercado')}</h1>
         <button class="btn primario" data-accion="publicar-anuncio">${ui.ic('plus')}<span>${t('publicarAnuncio')}</span></button>
       </div>
       <div class="segmentado subpestanas">
@@ -272,11 +281,11 @@ X.vMercado = (() => {
       <div class="modal-corpo ficha ficha-anuncio">
         ${a.fotos && a.fotos.length ? `<div class="carrusel-caixa"><div class="carrusel">${a.fotos.map(f => `<img src="${u.esc(urlFoto(f))}" alt="" loading="lazy">`).join('')}</div>
             ${a.fotos.length > 1 ? `<span class="carrusel-conta">1 / ${a.fotos.length}</span>` : ''}</div>`
-          : `<div class="anuncio-foto grande"><span class="ph">${phAnuncio(a)}</span></div>`}
-        <div class="prezo-anuncio grande">${textoPrezo(a)}</div>
+          : `<div class="anuncio-foto grande"><span class="ph">${phAnuncio()}</span></div>`}
+        <div class="prezo-ficha">${etiquetaPrezo(a, 'grande')}</div>
         ${destacado(a) ? `<span class="selo-destacado estatico">★ ${t('destacado')}</span>` : ''}
         ${a.estado !== 'activo' ? `<p class="estado-repro ambar">${t('estadoAnuncio_' + a.estado)}</p>` : ''}
-        ${a.caracteristicas && a.caracteristicas.length ? `<div class="chips">${a.caracteristicas.map(k => ui.chip(t('car_' + k), 'azul')).join('')}</div>` : ''}
+        ${a.caracteristicas && a.caracteristicas.length ? `<div class="chips-anuncio">${a.caracteristicas.map(k => `<span>${t('car_' + k)}</span>`).join('')}</div>` : ''}
         <dl class="datos">
           ${almacen(a) ? `
           ${fila(t('tipoUnidade'), `${iconaTipo(a.especie)} ${nomeTipo(a.especie)}`)}

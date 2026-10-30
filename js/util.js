@@ -36,7 +36,7 @@ X.u = (() => {
     return isFinite(n) ? n : null;
   };
 
-  const locale = () => (X.lang === 'es' ? 'es-ES' : 'gl-ES');
+  const locale = () => X.locale();
   const numero = (n, dec = 1) => (+n).toLocaleString(locale(), { maximumFractionDigits: dec });
   const kg = n => n == null || !isFinite(n) ? '—' : numero(n, Math.abs(n) >= 100 ? 0 : 1) + ' kg';
   const dinheiro = n => n == null ? '—' : (+n).toLocaleString(locale(), { style: 'currency', currency: 'EUR' });

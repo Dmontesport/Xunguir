@@ -1,10 +1,10 @@
 'use strict';
 // Service worker: garda os ficheiros da app para que abra sen conexión.
 // Os datos van por outro camiño (dispositivo + Supabase), non se cachean aquí.
-const CACHE = 'xunguir-2.4.1';
+const CACHE = 'xunguir-2.5.0';
 const FICHEIROS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilos.css',
-  'js/i18n.js', 'js/config.js', 'js/util.js', 'js/datos.js', 'js/calculos.js', 'js/vendor/supabase.js',
+  'js/i18n.js', 'js/i18n-eu.js', 'js/i18n-ca.js', 'js/i18n-va.js', 'js/i18n-ast.js', 'js/config.js', 'js/util.js', 'js/datos.js', 'js/calculos.js', 'js/vendor/supabase.js',
   'js/github.js', 'js/nube.js', 'js/fotos.js', 'js/ui.js', 'js/legal.js', 'js/acceso.js', 'js/vista-animais.js', 'js/escaner.js', 'js/grupos.js', 'js/arrastrar.js', 'js/vista-parcelas.js', 'js/mercado.js','js/vista-config.js', 'js/novidades.js', 'js/app.js',
   'icons/icono.svg', 'icons/icono-192.png', 'icons/icono-512.png',
 ];

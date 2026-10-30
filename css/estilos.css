@@ -10,9 +10,13 @@
   --primario-2: #346a30;
   --primario-suave: #e3efdf;
   --texto-primario: #ffffff;
-  --mercado: #b0642a;
-  --mercado-2: #94521f;
-  --mercado-suave: #f8e9dc;
+  --mercado: #2b2a2d;
+  --mercado-2: #414042;
+  --mercado-suave: #fff4cc;
+  --mercado-boton: #2b2a2d;
+  --mercado-chip: #5c4300;
+  --mercado-ambar: #ffbe00;
+  --mercado-tinta: #231f20;
   --terra: #8a6a3b;
   --vermello: #c2412d;
   --vermello-suave: #fbe5e0;
@@ -47,9 +51,11 @@
     --primario-2: #82c474;
     --primario-suave: #26361f;
     --texto-primario: #10200c;
-    --mercado: #e0975c;
-    --mercado-2: #eaa977;
-    --mercado-suave: #3b2a1c;
+    --mercado: #ffbe00;
+    --mercado-2: #ffcf40;
+    --mercado-suave: #332b17;
+    --mercado-boton: #332b17;
+    --mercado-chip: #ffd766;
     --terra: #c9a26a;
     --vermello: #ef7a62;
     --vermello-suave: #3d221c;
@@ -79,9 +85,11 @@
   --primario-2: #82c474;
   --primario-suave: #26361f;
   --texto-primario: #10200c;
-  --mercado: #e0975c;
-  --mercado-2: #eaa977;
-  --mercado-suave: #3b2a1c;
+  --mercado: #ffbe00;
+  --mercado-2: #ffcf40;
+  --mercado-suave: #332b17;
+  --mercado-boton: #332b17;
+  --mercado-chip: #ffd766;
   --terra: #c9a26a;
   --vermello: #ef7a62;
   --vermello-suave: #3d221c;
@@ -125,6 +133,30 @@ small { color: var(--texto-2); }
 .pos { color: var(--primario); }
 .neg { color: var(--vermello); }
 
+/* ---------- Entrada ----------
+   Verde coma a pantalla de arranque de Android: o arco debúxase, caen os colgantes e despois
+   (app.js) o logo voa ao seu sitio mentres o verde se pecha en círculo cara a el */
+.intro {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  background: #3f7d3a; clip-path: circle(150vmax at var(--cx, 50%) var(--cy, 50%));
+  transition: clip-path .65s cubic-bezier(.6, 0, .25, 1), opacity .25s;
+}
+.intro.voando { clip-path: circle(23px at var(--cx) var(--cy)); }
+.intro.saindo { opacity: 0; }
+.intro-logo { width: 150px; height: 150px; transition: transform .65s cubic-bezier(.6, 0, .25, 1); }
+.intro-logo svg { display: block; width: 100%; height: 100%; animation: intro-entra .5s ease-out both; }
+/* O trazo crece desde a esquerda (o oco de 2 fai que non asome nada polo outro extremo) */
+.intro-arco { stroke-dasharray: 0 2; opacity: 0; animation: intro-arco .45s .1s ease-out forwards; }
+.intro-colgante { opacity: 0; animation: intro-colgante .4s cubic-bezier(.3, 1.6, .5, 1) forwards; }
+.intro-colgante:nth-of-type(2) { animation-delay: .45s; }
+.intro-colgante:nth-of-type(3) { animation-delay: .55s; }
+@keyframes intro-entra { from { transform: scale(.85); opacity: 0; } }
+@keyframes intro-arco { 15% { opacity: 1; } to { stroke-dasharray: 1 2; opacity: 1; } }
+@keyframes intro-colgante { from { opacity: 0; transform: translateY(-9px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .intro-logo svg, .intro-arco, .intro-colgante { animation: none; stroke-dasharray: none; opacity: 1; }
+}
+
 /* ---------- Barra superior ---------- */
 .barra {
   position: sticky; top: 0; z-index: 20;
@@ -142,9 +174,10 @@ small { color: var(--texto-2); }
 /* Mercado: botón aparte, con outro color, fóra das pestanas que se deslizan */
 .boton-mercado {
   display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; text-decoration: none; font-weight: 700;
-  color: var(--mercado); background: var(--mercado-suave); border: 1.5px solid var(--mercado); white-space: nowrap;
+  color: var(--mercado-ambar); background: var(--mercado-boton); border: 1.5px solid var(--mercado); white-space: nowrap;
 }
-.boton-mercado.activa { background: var(--mercado); color: #fff; }
+.boton-mercado.activa { background: var(--mercado-ambar); color: var(--mercado-tinta); }
+.ic-mercado { width: 20px; height: 20px; flex: none; }
 .pestanas a {
   position: relative; display: flex; align-items: center; gap: 6px;
   padding: 7px 16px; border-radius: 9px; text-decoration: none; color: var(--texto-2); font-weight: 600;
@@ -596,7 +629,8 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .acceso-erro { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--vermello-suave); color: var(--vermello); font-weight: 600; }
 .acceso-lista { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--texto-2); }
 .acceso-ligazons { margin: 0; text-align: center; }
-.acceso-lingua { display: flex; justify-content: center; gap: 10px; color: var(--texto-2); font-size: .9rem; }
+.acceso-lingua { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 4px; color: var(--texto-2); font-size: .86rem; }
+.acceso-lingua .enlace { justify-content: flex-start; white-space: nowrap; }
 .acceso-lingua .enlace {
   display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 99px; border: 1.5px solid transparent;
   color: var(--texto-2); font-weight: 500; text-decoration: none;
@@ -604,7 +638,8 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 .acceso-lingua .enlace.activa { color: var(--primario); font-weight: 700; border-color: var(--primario); }
 /* Bandeiras dos idiomas */
 .bandeira { width: 24px; height: 16px; flex: none; vertical-align: -3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); border-radius: 2.5px; }
-.acceso-lingua .bandeira { width: 27px; height: 18px; }
+.acceso-lingua .bandeira { width: 24px; height: 16px; }
+.segmentado.linguas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 .conta-correo { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
 
 /* Aviso de versión nova */
@@ -621,38 +656,67 @@ form:not([data-tipo-lote="silo"]) .so-silo { display: none; }
 
 /* ---------- Mercado ---------- */
 /* Dentro do Mercado, o color principal pasa a ser o do mercado */
-body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); --primario-suave: var(--mercado-suave); --texto-primario: #fff; }
-@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) body.modo-mercado { --texto-primario: #23130a; } }
-:root[data-tema="escuro"] body.modo-mercado { --texto-primario: #23130a; }
+/* Cores da icona: carbón e ámbar. En claro o ámbar vai sempre de fondo (como letra non se le) */
+body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); --primario-suave: var(--mercado-suave); --texto-primario: var(--mercado-ambar); }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) body.modo-mercado { --texto-primario: var(--mercado-tinta); } }
+:root[data-tema="escuro"] body.modo-mercado { --texto-primario: var(--mercado-tinta); }
 .mercado { display: flex; flex-direction: column; gap: 12px; }
 .mercado-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mercado-cab h1 { display: flex; align-items: center; gap: 8px; }
+.mercado-cab h1 .ic-mercado { width: 30px; height: 30px; color: var(--mercado); }
+.baleiro-ic .ic-mercado { width: 56px; height: 56px; color: var(--mercado-ambar); }
 .mercado .subpestanas { max-width: 420px; }
 .mercado .ferramentas { margin-bottom: 0; }
 .selector-orde { width: auto; min-height: 34px; padding: 4px 10px; border-radius: 99px; flex: none; font-size: .88rem; font-weight: 600; }
-.grella-anuncios { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-@media (max-width: 520px) { .grella-anuncios { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; } }
+/* Tarxeta a lo ancho: foto á esquerda e datos á dereita. Unha por fila no móbil, dúas no ordenador */
+.grella-anuncios { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 12px; }
+@media (max-width: 520px) { .grella-anuncios { gap: 10px; } }
 .tarxeta-anuncio {
-  background: var(--superficie); border-radius: var(--raio); box-shadow: var(--sombra); overflow: hidden; cursor: pointer;
-  border: 1.5px solid transparent; transition: transform .12s;
+  display: flex; background: var(--superficie); border-radius: var(--raio); box-shadow: var(--sombra); overflow: hidden; cursor: pointer;
+  border: 2px solid transparent; transition: transform .12s;
 }
 .tarxeta-anuncio:hover { transform: translateY(-2px); }
-.tarxeta-anuncio.destacado { border-color: var(--mercado); }
+.tarxeta-anuncio.destacado { border-color: var(--mercado-ambar); }
 .tarxeta-anuncio.inactivo { opacity: .65; }
-.tarxeta-anuncio .info { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; }
+.tarxeta-anuncio > .anuncio-foto { flex: 0 0 46%; align-self: stretch; }
+.tarxeta-anuncio .info { flex: 1; min-width: 0; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .tarxeta-anuncio h3 { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.tarxeta-anuncio .lugar { font-size: .8rem; color: var(--texto-2); }
+.tarxeta-anuncio .sub { font-size: .84rem; color: var(--texto-2); }
+.tarxeta-anuncio .lugar { font-size: .78rem; color: var(--texto-2); margin-top: auto; }
+.chips-anuncio { display: flex; flex-wrap: wrap; gap: 4px; }
+.chips-anuncio span { padding: 1px 7px; border-radius: 99px; font-size: .7rem; font-weight: 600; background: var(--mercado-suave); color: var(--mercado-chip); }
+.ficha-anuncio .chips-anuncio { margin: 4px 0 2px; }
+.ficha-anuncio .chips-anuncio span { font-size: .84rem; padding: 3px 10px; }
 .anuncio-foto { position: relative; aspect-ratio: 4 / 3; background: var(--superficie-2); overflow: hidden; }
 .anuncio-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.anuncio-foto .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.6rem; }
+.anuncio-foto .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--mercado-suave); }
+.ph-mercado { width: 38%; height: auto; max-width: 120px; color: var(--mercado-ambar); }
 .anuncio-foto.grande { border-radius: var(--raio); }
-.prezo-anuncio { font-weight: 800; font-size: 1.05rem; color: var(--mercado); }
-.prezo-anuncio.grande { font-size: 1.5rem; margin: 10px 0 4px; }
+.anuncio-foto .cinta { top: 0; bottom: auto; }
+/* Prezo: etiqueta ámbar inclinada, abaixo á dereita da foto, co buratiño das etiquetas de feira */
+.etiqueta-prezo {
+  position: absolute; right: 8px; bottom: 12px; max-width: calc(100% - 16px); transform: rotate(-7deg);
+  display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1;
+  padding: 4px 9px 4px 17px; border-radius: 5px; border: 1.5px solid var(--mercado-tinta);
+  background: var(--mercado-ambar); color: var(--mercado-tinta); box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+}
+.etiqueta-prezo::before {
+  content: ""; position: absolute; left: 5px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%;
+  background: var(--superficie); border: 1.5px solid var(--mercado-tinta); box-sizing: border-box;
+}
+.etiqueta-prezo b { font-size: 1rem; font-weight: 800; white-space: nowrap; }
+.etiqueta-prezo small { font-size: .7rem; font-weight: 600; color: inherit; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prezo-ficha { margin: 14px 0 6px; }
+.etiqueta-prezo.grande { position: static; display: inline-flex; flex-direction: row; align-items: baseline; gap: 6px; transform: rotate(-3deg); transform-origin: left center; padding: 6px 14px 6px 22px; }
+.etiqueta-prezo.grande::before { left: 7px; width: 9px; height: 9px; margin-top: -4.5px; }
+.etiqueta-prezo.grande b { font-size: 1.45rem; }
+.etiqueta-prezo.grande small { font-size: .9rem; }
 .selo-destacado {
   position: absolute; top: 8px; left: 8px; padding: 2px 8px; border-radius: 99px; font-size: .72rem; font-weight: 800;
-  background: var(--mercado); color: #fff;
+  background: var(--mercado-ambar); color: var(--mercado-tinta);
 }
 .selo-destacado.estatico { position: static; display: inline-block; margin-bottom: 6px; }
-.n-fotos { position: absolute; right: 8px; bottom: 8px; padding: 1px 7px; border-radius: 99px; font-size: .72rem; background: rgba(0, 0, 0, .55); color: #fff; }
+.n-fotos { position: absolute; right: 8px; top: 8px; padding: 1px 7px; border-radius: 99px; font-size: .72rem; background: rgba(0, 0, 0, .55); color: #fff; }
 /* Fotos da ficha: caixa de tamaño fixo (4:3, non máis alta que media pantalla) e a foto encaixada dentro.
    min-width: 0 evita que a imaxe ocupe o seu tamaño real (as fotos do móbil son moi grandes) */
 .carrusel-caixa { position: relative; }
@@ -664,10 +728,6 @@ body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); 
 .carrusel img { flex: 0 0 100%; width: 100%; min-width: 0; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
 .carrusel-conta { position: absolute; right: 10px; bottom: 10px; padding: 2px 9px; border-radius: 99px; font-size: .78rem; background: rgba(0, 0, 0, .55); color: #fff; pointer-events: none; }
 .ficha-anuncio .anuncio-foto.grande { max-height: 55vh; }
-/* Anuncios do almacén sen foto: a icona da unidade, grande */
-.ph-almacen { display: flex; align-items: center; justify-content: center; }
-.ph-almacen .unidade { transform: scale(3.2); }
-.anuncio-foto.grande .ph-almacen .unidade { transform: scale(5); }
 .tarxeta-anuncio .sub .unidade { vertical-align: -2px; }
 .categorias-mercado { margin-bottom: 10px; }
 .form-anuncio .categorias-mercado { margin-bottom: 14px; }

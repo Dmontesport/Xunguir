@@ -19,7 +19,7 @@ X.app = (() => {
           <a href="#animais" class="${vista === 'animais' ? 'activa' : ''}">${t('animais')}${ins(nAn)}</a>
           <a href="#parcelas" class="${vista === 'parcelas' ? 'activa' : ''}">${t('parcelas')}${ins(nPa)}</a>
         </nav>
-        <a href="#mercado" class="boton-mercado ${vista === 'mercado' ? 'activa' : ''}">⚖️ <span>${t('mercado')}</span></a>
+        <a href="#mercado" class="boton-mercado ${vista === 'mercado' ? 'activa' : ''}">${ui.iconaMercado()}<span>${t('mercado')}</span></a>
       </div>
       <div class="accions">
         <button class="btn-icono" id="btnSync" data-accion="sync"></button>
@@ -33,7 +33,7 @@ X.app = (() => {
     const b = $('#btnSync');
     if (!b) return;
     const s = X.sync.st;
-    const hora = s.ultima ? s.ultima.toLocaleTimeString(X.lang === 'es' ? 'es-ES' : 'gl-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+    const hora = s.ultima ? s.ultima.toLocaleTimeString(X.locale(), { hour: '2-digit', minute: '2-digit' }) : '';
     const m = {
       local: ['cloudOff', t('syncLocal')], pendente: ['cloud', t('syncPendente')], sincronizando: ['refresh', s.msg || t('syncEnCurso')],
       ok: ['cloudOk', t('syncOk', { h: hora })], erro: ['alert', t('syncErro', { msg: s.msg })],
@@ -196,6 +196,38 @@ X.app = (() => {
     setInterval(() => { if (document.visibilityState === 'visible') X.sync.executar(); }, 120000);
   }
 
+  // ---- Entrada ----
+  // O logo do arranque (sobre verde, coma a pantalla de Android) voa ata o logo da cabeceira ou
+  // da pantalla de acceso mentres o verde se pecha cara a el. Con "reducir movimento", só un fundido.
+  const INTRO_MS = 950, VOO_MS = 650;
+  const agardar = ms => new Promise(r => setTimeout(r, ms));
+  let pechandoIntro = null;
+  function pecharIntro(destino) {
+    if (!pechandoIntro) pechandoIntro = (async () => {
+      const intro = $('#intro');
+      if (!intro) return;
+      // Que dea tempo a debuxarse o logo (conta desde que se abriu a páxina)
+      await agardar(INTRO_MS - performance.now());
+      const obx = $(destino);
+      if (obx && obx.getClientRects().length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const logo = intro.querySelector('.intro-logo'), a = logo.getBoundingClientRect(), b = obx.getBoundingClientRect();
+        const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+        intro.style.setProperty('--cx', `${cx}px`);
+        intro.style.setProperty('--cy', `${cy}px`);
+        logo.style.transform = `translate(${cx - a.left - a.width / 2}px, ${cy - a.top - a.height / 2}px) scale(${b.width / a.width})`;
+        intro.classList.add('voando');
+        obx.style.visibility = 'hidden';
+        await agardar(VOO_MS);
+        obx.style.visibility = '';
+      } else {
+        intro.classList.add('saindo');
+        await agardar(250);
+      }
+      intro.remove();
+    })();
+    return pechandoIntro;
+  }
+
   // ---- Aviso de versión nova ----
   // Compara a versión desta app con version.json do servidor (ao abrir, ao volver á app e cada 30 min)
   let versionAvisada = false;
@@ -256,6 +288,7 @@ X.app = (() => {
     listo = true;
     navegar();
     X.sync.executar();
+    await pecharIntro('#barra .logo');
     await X.acceso.migrar();
     X.novidades.comprobar();
 
@@ -266,5 +299,5 @@ X.app = (() => {
 
   document.addEventListener('DOMContentLoaded', iniciar);
 
-  return { render, renderSync };
+  return { render, renderSync, pecharIntro };
 })();

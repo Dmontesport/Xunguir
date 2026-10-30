@@ -37,9 +37,24 @@ X.ui = (() => {
   const logo = () => `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#3f7d3a"/><path d="M8 28Q32 14 56 28" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M14 26v10a6.5 6.5 0 0 0 13 0V23M37 23v13a6.5 6.5 0 0 0 13 0V26" fill="none" stroke="#f1dca4" stroke-width="4.5" stroke-linecap="round"/></svg>`;
 
   // Bandeiras dos idiomas (en SVG: Windows non debuxa as bandeiras emoji e Galicia non ten)
+  // Icona do Mercado (chama co %, de icons/deal-hot-sale-svgrepo-com.svg) nunha soa cor:
+  // o % vai calado (evenodd), así vese o fondo e serve en claro, escuro e no botón activo
+  const iconaMercado = (cls = '') => `<svg class="ic-mercado ${cls}" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M58,35c0,14.82-11.18,26-26,26C16.45,61,6,50.55,6,35A53,53,0,0,1,8.08,19.45,2,2,0,0,1,10,18h0a2,2,0,0,1,1.9,1.37C12,19.6,12.65,21,15,21c4.84,0,5-9.9,5-10a2,2,0,0,1,2.89-1.79A9,9,0,0,0,27,10c2.44,0,4.06-2.39,5-4.46a18.58,18.58,0,0,0,1-3A2,2,0,0,1,35,1h0A2,2,0,0,1,37,2.67C37.68,6.91,40.86,19,46,19c4.12,0,5-3.9,5-4.34A2,2,0,0,1,52.82,13a2,2,0,0,1,2,1.28C58,22.64,58,31.94,58,35Z
+    M42.41,30.41,32,40.82l-8.59,8.59a2,2,0,0,1-2.82-2.82L32,35.18l7.59-7.59a2,2,0,0,1,2.82,2.82Z
+    M24.5,37A5.5,5.5,0,1,0,19,31.5,5.51,5.51,0,0,0,24.5,37Zm0-7A1.5,1.5,0,1,1,23,31.5,1.5,1.5,0,0,1,24.5,30Z
+    M38.5,40A5.5,5.5,0,1,0,44,45.5,5.51,5.51,0,0,0,38.5,40Zm0,7A1.5,1.5,0,1,1,40,45.5,1.5,1.5,0,0,1,38.5,47Z"/></svg>`;
+
   const BANDEIRAS = {
     gl: '<rect width="30" height="20" fill="#fff"/><path d="M0 0L30 20" stroke="#0d94d2" stroke-width="5.5"/>',
     es: '<rect width="30" height="20" fill="#c60b1e"/><rect y="5" width="30" height="10" fill="#ffc400"/>',
+    // Ikurriña
+    eu: '<rect width="30" height="20" fill="#d52b1e"/><path d="M0 0L30 20M30 0L0 20" stroke="#009b48" stroke-width="3.2"/><path d="M15 0v20M0 10h30" stroke="#fff" stroke-width="3.2"/>',
+    // Senyera
+    ca: '<rect width="30" height="20" fill="#fcdd09"/><path d="M0 3.33h30M0 7.78h30M0 12.22h30M0 16.67h30" stroke="#da121a" stroke-width="2.22"/>',
+    // Senyera coa franxa azul e a coroa (simplificada)
+    va: '<rect width="30" height="20" fill="#fcdd09"/><path d="M0 3.33h30M0 7.78h30M0 12.22h30M0 16.67h30" stroke="#da121a" stroke-width="2.22"/><rect width="8" height="20" fill="#0072ce"/><path d="M1.6 9.5l1 -2.6 1.4 1.6 1.4 -1.6 1 2.6z" fill="#fcdd09"/>',
+    // Cruz da Victoria sobre azul (simplificada)
+    ast: '<rect width="30" height="20" fill="#0066b3"/><path d="M15 3.5v13M10.8 7.6h8.4" stroke="#fdd116" stroke-width="2"/><path d="M13.8 16.5h2.4M10.8 6.4v2.4M19.2 6.4v2.4" stroke="#fdd116" stroke-width="1.2"/>',
   };
   const bandeira = lingua => `<svg class="bandeira" viewBox="0 0 30 20" aria-hidden="true"><clipPath id="bd-${lingua}"><rect width="30" height="20" rx="2.5"/></clipPath><g clip-path="url(#bd-${lingua})">${BANDEIRAS[lingua]}</g></svg>`;
 
@@ -163,5 +178,5 @@ X.ui = (() => {
   const botonAviso = a => `<button class="aviso nivel-${a.nivel}" data-accion="ir-aviso" data-tipo="${a.ref.tipo}" data-id="${a.ref.id || ''}">
     <span class="punto"></span><span class="txt"><b>${u.esc(a.texto)}</b>${a.detalle ? `<small>${u.esc(a.detalle)}</small>` : ''}</span></button>`;
 
-  return { ic, logo, bandeira, toast, modal, confirmar, cab, campo, entrada, numero, dataInp, selector, pe, btnGardar, btnCancelar, foto, chip, tiraAvisos, botonAviso };
+  return { ic, logo, iconaMercado, bandeira, toast, modal, confirmar, cab, campo, entrada, numero, dataInp, selector, pe, btnGardar, btnCancelar, foto, chip, tiraAvisos, botonAviso };
 })();
