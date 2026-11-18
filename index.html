@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="Xunguir">
   <!-- Tema escollido (claro/escuro) antes de pintar, para que non parpadee -->
   <script>try { var tema = localStorage.getItem('xunguir.tema'); if (tema === 'claro' || tema === 'escuro') document.documentElement.dataset.tema = tema; } catch (e) {}</script>
-  <link rel="stylesheet" href="css/estilos.css?v=2.5.0">
+  <link rel="stylesheet" href="css/estilos.css?v=2.6.0">
 </head>
 <body>
   <!-- Entrada: o mesmo logo da pantalla de arranque de Android, sobre verde; despois voa ao seu sitio -->
@@ -29,36 +29,38 @@
   <header class="barra" id="barra"></header>
   <div id="avisoVersion" class="aviso-version" hidden></div>
   <main id="vista" class="vista"></main>
+  <!-- Fóra da cabeceira: o seu desenfoque (backdrop-filter) non deixaría fixala abaixo -->
+  <nav id="navInferior" class="nav-inferior"></nav>
   <div id="panelAvisos" class="panel-avisos" hidden></div>
   <dialog id="modal" class="modal"></dialog>
   <dialog id="confirmar" class="confirmar"></dialog>
   <div id="barraSoltar" class="barra-soltar" hidden></div>
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script src="js/i18n.js?v=2.5.0"></script>
-  <script src="js/i18n-eu.js?v=2.5.0"></script>
-  <script src="js/i18n-ca.js?v=2.5.0"></script>
-  <script src="js/i18n-va.js?v=2.5.0"></script>
-  <script src="js/i18n-ast.js?v=2.5.0"></script>
-  <script src="js/config.js?v=2.5.0"></script>
-  <script src="js/util.js?v=2.5.0"></script>
-  <script src="js/datos.js?v=2.5.0"></script>
-  <script src="js/calculos.js?v=2.5.0"></script>
-  <script src="js/vendor/supabase.js?v=2.5.0"></script>
-  <script src="js/github.js?v=2.5.0"></script>
-  <script src="js/nube.js?v=2.5.0"></script>
-  <script src="js/fotos.js?v=2.5.0"></script>
-  <script src="js/ui.js?v=2.5.0"></script>
-  <script src="js/legal.js?v=2.5.0"></script>
-  <script src="js/acceso.js?v=2.5.0"></script>
-  <script src="js/vista-animais.js?v=2.5.0"></script>
-  <script src="js/escaner.js?v=2.5.0"></script>
-  <script src="js/grupos.js?v=2.5.0"></script>
-  <script src="js/arrastrar.js?v=2.5.0"></script>
-  <script src="js/vista-parcelas.js?v=2.5.0"></script>
-  <script src="js/mercado.js?v=2.5.0"></script>
-  <script src="js/vista-config.js?v=2.5.0"></script>
-  <script src="js/novidades.js?v=2.5.0"></script>
-  <script src="js/app.js?v=2.5.0"></script>
+  <script src="js/i18n.js?v=2.6.0"></script>
+  <script src="js/i18n-eu.js?v=2.6.0"></script>
+  <script src="js/i18n-ca.js?v=2.6.0"></script>
+  <script src="js/i18n-va.js?v=2.6.0"></script>
+  <script src="js/i18n-ast.js?v=2.6.0"></script>
+  <script src="js/config.js?v=2.6.0"></script>
+  <script src="js/util.js?v=2.6.0"></script>
+  <script src="js/datos.js?v=2.6.0"></script>
+  <script src="js/calculos.js?v=2.6.0"></script>
+  <script src="js/vendor/supabase.js?v=2.6.0"></script>
+  <script src="js/github.js?v=2.6.0"></script>
+  <script src="js/nube.js?v=2.6.0"></script>
+  <script src="js/fotos.js?v=2.6.0"></script>
+  <script src="js/ui.js?v=2.6.0"></script>
+  <script src="js/legal.js?v=2.6.0"></script>
+  <script src="js/acceso.js?v=2.6.0"></script>
+  <script src="js/vista-animais.js?v=2.6.0"></script>
+  <script src="js/escaner.js?v=2.6.0"></script>
+  <script src="js/grupos.js?v=2.6.0"></script>
+  <script src="js/arrastrar.js?v=2.6.0"></script>
+  <script src="js/vista-parcelas.js?v=2.6.0"></script>
+  <script src="js/mercado.js?v=2.6.0"></script>
+  <script src="js/vista-config.js?v=2.6.0"></script>
+  <script src="js/novidades.js?v=2.6.0"></script>
+  <script src="js/app.js?v=2.6.0"></script>
 </body>
 </html>

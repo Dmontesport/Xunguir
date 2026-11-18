@@ -31,10 +31,15 @@ X.ui = (() => {
     back: '<path d="m15 18-6-6 6-6"/>',
     minus: '<path d="M5 12h14"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7v10M12 7v10M16 7v10"/>',
+    vaca: '<path d="M6 3.5c0 2 1 3.5 3 3.5M18 3.5c0 2-1 3.5-3 3.5"/><path d="M8 7h8a1 1 0 0 1 1 1v6a5 5 0 0 1-10 0V8a1 1 0 0 1 1-1z"/><path d="M7 9H4.5a1.5 1.5 0 0 0 0 3H7M17 9h2.5a1.5 1.5 0 0 1 0 3H17"/><path d="M10 10.5h.01M14 10.5h.01M10.5 16h.01M13.5 16h.01"/>',
+    gromo: '<path d="M12 20v-8"/><path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6z"/><path d="M12 14.5c0-3 2.5-5 7-5 0 3.5-2.5 5-7 5z"/><path d="M4 20h16"/>',
   };
   const ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
   const logo = () => `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#3f7d3a"/><path d="M8 28Q32 14 56 28" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M14 26v10a6.5 6.5 0 0 0 13 0V23M37 23v13a6.5 6.5 0 0 0 13 0V26" fill="none" stroke="#f1dca4" stroke-width="4.5" stroke-linecap="round"/></svg>`;
+
+  // Só o xugo, sen o cadrado: para a cabeceira. O arco colle a cor principal (no Mercado, a del)
+  const xugo = () => `<svg class="logo xugo" viewBox="6 12 52 34" aria-hidden="true"><path class="arco" d="M8 28Q32 14 56 28" fill="none" stroke-width="6.5" stroke-linecap="round"/><path class="colgantes" d="M14 26v10a6.5 6.5 0 0 0 13 0V23M37 23v13a6.5 6.5 0 0 0 13 0V26" fill="none" stroke-width="5" stroke-linecap="round"/></svg>`;
 
   // Bandeiras dos idiomas (en SVG: Windows non debuxa as bandeiras emoji e Galicia non ten)
   // Icona do Mercado (chama co %, de icons/deal-hot-sale-svgrepo-com.svg) nunha soa cor:
@@ -178,5 +183,5 @@ X.ui = (() => {
   const botonAviso = a => `<button class="aviso nivel-${a.nivel}" data-accion="ir-aviso" data-tipo="${a.ref.tipo}" data-id="${a.ref.id || ''}">
     <span class="punto"></span><span class="txt"><b>${u.esc(a.texto)}</b>${a.detalle ? `<small>${u.esc(a.detalle)}</small>` : ''}</span></button>`;
 
-  return { ic, logo, iconaMercado, bandeira, toast, modal, confirmar, cab, campo, entrada, numero, dataInp, selector, pe, btnGardar, btnCancelar, foto, chip, tiraAvisos, botonAviso };
+  return { ic, logo, xugo, iconaMercado, bandeira, toast, modal, confirmar, cab, campo, entrada, numero, dataInp, selector, pe, btnGardar, btnCancelar, foto, chip, tiraAvisos, botonAviso };
 })();

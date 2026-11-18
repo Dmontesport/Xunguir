@@ -10,6 +10,33 @@ X.novidades = (() => {
   // [icona, título, texto]
   const LISTA = [
     {
+      version: '2.6.0', data: '2026-11-18',
+      gl: [
+        ['👇', 'Pestanas abaixo', 'Animais, Parcelas e Mercado están agora na barra de abaixo, ao alcance do dedo. No ordenador seguen arriba.'],
+        ['🏷️', 'Cabeceira nova', 'Arriba vese en grande onde estás, co xugo de Xunguir (ou a chama no Mercado). A configuración segue na icona de arriba á dereita.'],
+      ],
+      es: [
+        ['👇', 'Pestañas abajo', 'Animales, Parcelas y Mercado están ahora en la barra de abajo, al alcance del dedo. En el ordenador siguen arriba.'],
+        ['🏷️', 'Cabecera nueva', 'Arriba se ve en grande dónde estás, con el yugo de Xunguir (o la llama en el Mercado). La configuración sigue en el icono de arriba a la derecha.'],
+      ],
+      eu: [
+        ['👇', 'Fitxak behean', 'Animaliak, Lursailak eta Merkatua beheko barran daude orain, hatzaren eskura. Ordenagailuan goian jarraitzen dute.'],
+        ['🏷️', 'Goiburu berria', 'Goian letra handiz ikusten da non zauden, Xunguir-en uztarriarekin (edo sugarrarekin Merkatuan). Ezarpenak goian eskuinean dagoen ikonoan daude.'],
+      ],
+      ca: [
+        ['👇', 'Pestanyes a baix', 'Animals, Parcel·les i Mercat són ara a la barra de baix, a l’abast del dit. A l’ordinador continuen a dalt.'],
+        ['🏷️', 'Capçalera nova', 'A dalt es veu en gran on ets, amb el jou de Xunguir (o la flama al Mercat). La configuració continua a la icona de dalt a la dreta.'],
+      ],
+      va: [
+        ['👇', 'Pestanyes davall', 'Animals, Parcel·les i Mercat estan ara en la barra de davall, a l’abast del dit. En l’ordinador continuen dalt.'],
+        ['🏷️', 'Capçalera nova', 'Dalt es veu en gran on estàs, amb el jou de Xunguir (o la flama en el Mercat). La configuració continua en la icona de dalt a la dreta.'],
+      ],
+      ast: [
+        ['👇', 'Llingüetes abaxo', 'Animales, Parceles y Mercáu tán agora na barra d’abaxo, a mano del deu. Nel ordenador siguen arriba.'],
+        ['🏷️', 'Cabecera nueva', 'Arriba vese en grande ónde tas, col xugu de Xunguir (o la llama nel Mercáu). La configuración sigue nel iconu d’arriba a la drecha.'],
+      ],
+    },
+    {
       version: '2.5.0', data: '2026-10-30',
       gl: [
         ['🎨', 'Novo aspecto do Mercado', 'Cores novas sacadas da súa icona (carbón e ámbar) e unha icona propia no botón.'],

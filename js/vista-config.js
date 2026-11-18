@@ -19,7 +19,6 @@ X.vConfig = (() => {
     const correo = X.nube.correo() || localStorage.getItem('xunguir.ultimoCorreo') || '';
 
     main.innerHTML = `<div class="config">
-      <h1>${t('configuracion')}</h1>
 
       <section class="tarxeta-config">
         <h2>${t('minaConta')}${X.nube.entorno === 'test' ? ` <span class="chip ambar">${t('probas')}</span>` : ''}</h2>

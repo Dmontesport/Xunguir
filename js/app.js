@@ -10,22 +10,18 @@ X.app = (() => {
 
   function cabeceira() {
     const av = X.calc.avisos().filter(a => a.nivel !== 'info');
-    const nAn = av.filter(a => a.ref.tipo === 'animal').length, nPa = av.length - nAn;
     const ins = n => n ? `<span class="insignia">${n}</span>` : '';
+    // Arriba: o xugo (a chama no Mercado) e o nome da pestana, en grande.
+    // Abaixo (no ordenador, arriba no medio): as tres pestanas
     $('#barra').innerHTML = `
-      <a class="marca" href="#animais">${ui.logo()}<span>Xunguir</span></a>
-      <div class="navegacion">
-        <nav class="pestanas">
-          <a href="#animais" class="${vista === 'animais' ? 'activa' : ''}">${t('animais')}${ins(nAn)}</a>
-          <a href="#parcelas" class="${vista === 'parcelas' ? 'activa' : ''}">${t('parcelas')}${ins(nPa)}</a>
-        </nav>
-        <a href="#mercado" class="boton-mercado ${vista === 'mercado' ? 'activa' : ''}">${ui.iconaMercado()}<span>${t('mercado')}</span></a>
-      </div>
+      <div class="marca">${vista === 'mercado' ? ui.iconaMercado() : ui.xugo()}<h1>${t(vista === 'config' ? 'configuracion' : vista)}</h1></div>
       <div class="accions">
         <button class="btn-icono" id="btnSync" data-accion="sync"></button>
         <button class="btn-icono" id="btnAvisos" data-accion="avisos" aria-label="${t('avisos')}" title="${t('avisos')}">${ui.ic('bell')}${ins(av.length)}</button>
         <a class="btn-icono ${vista === 'config' ? 'activa' : ''}" href="#config" aria-label="${t('configuracion')}" title="${t('configuracion')}">${ui.ic('sliders')}</a>
       </div>`;
+    $('#navInferior').innerHTML = [['animais', ui.ic('vaca')], ['parcelas', ui.ic('gromo')], ['mercado', ui.iconaMercado()]].map(([v, ic]) =>
+      `<a href="#${v}" class="pestana-${v} ${vista === v ? 'activa' : ''}" ${vista === v ? 'aria-current="page"' : ''}><span class="nav-ic">${ic}</span><span>${t(v)}</span></a>`).join('');
     renderSync();
   }
 
@@ -212,9 +208,16 @@ X.app = (() => {
       if (obx && obx.getClientRects().length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
         const logo = intro.querySelector('.intro-logo'), a = logo.getBoundingClientRect(), b = obx.getBoundingClientRect();
         const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+        // O xugo da cabeceira non ten cadrado: ocupa 52 das 64 unidades do logo, e toma as súas cores
+        const xugo = obx.classList.contains('xugo');
         intro.style.setProperty('--cx', `${cx}px`);
         intro.style.setProperty('--cy', `${cy}px`);
-        logo.style.transform = `translate(${cx - a.left - a.width / 2}px, ${cy - a.top - a.height / 2}px) scale(${b.width / a.width})`;
+        if (xugo) {
+          intro.classList.add('sen-fondo');
+          intro.style.setProperty('--arco-destino', getComputedStyle(obx.querySelector('.arco')).stroke);
+          intro.style.setProperty('--colgantes-destino', getComputedStyle(obx.querySelector('.colgantes')).stroke);
+        }
+        logo.style.transform = `translate(${cx - a.left - a.width / 2}px, ${cy - a.top - a.height / 2}px) scale(${b.width / a.width * (xugo ? 64 / 52 : 1)})`;
         intro.classList.add('voando');
         obx.style.visibility = 'hidden';
         await agardar(VOO_MS);
@@ -288,7 +291,7 @@ X.app = (() => {
     listo = true;
     navegar();
     X.sync.executar();
-    await pecharIntro('#barra .logo');
+    await pecharIntro('#barra .marca svg');
     await X.acceso.migrar();
     X.novidades.comprobar();
 

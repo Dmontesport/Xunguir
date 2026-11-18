@@ -239,12 +239,11 @@ X.vMercado = (() => {
 
     main.innerHTML = `<div class="mercado">
       <div class="mercado-cab">
-        <h1>${ui.iconaMercado()} ${t('mercado')}</h1>
-        <button class="btn primario" data-accion="publicar-anuncio">${ui.ic('plus')}<span>${t('publicarAnuncio')}</span></button>
-      </div>
-      <div class="segmentado subpestanas">
-        <label><input type="radio" name="pestanaMercado" value="buscar" ${st.pestana === 'buscar' ? 'checked' : ''} data-cambio="pestana-mercado"><span>${ui.ic('search')} ${t('buscar')}</span></label>
-        <label><input type="radio" name="pestanaMercado" value="meus" ${st.pestana === 'meus' ? 'checked' : ''} data-cambio="pestana-mercado"><span>📣 ${t('meusAnuncios')}</span></label>
+        <div class="segmentado subpestanas">
+          <label><input type="radio" name="pestanaMercado" value="buscar" ${st.pestana === 'buscar' ? 'checked' : ''} data-cambio="pestana-mercado"><span>${ui.ic('search')} ${t('buscar')}</span></label>
+          <label><input type="radio" name="pestanaMercado" value="meus" ${st.pestana === 'meus' ? 'checked' : ''} data-cambio="pestana-mercado"><span>📣 ${t('meusAnuncios')}</span></label>
+        </div>
+        <button class="btn primario" data-accion="publicar-anuncio" aria-label="${t('publicarAnuncio')}">${ui.ic('plus')}<span class="so-ancho">${t('publicarAnuncio')}</span></button>
       </div>
       ${st.pestana === 'buscar' ? `
         <div class="segmentado categorias-mercado">

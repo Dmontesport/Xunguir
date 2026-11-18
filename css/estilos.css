@@ -136,14 +136,21 @@ small { color: var(--texto-2); }
 /* ---------- Entrada ----------
    Verde coma a pantalla de arranque de Android: o arco debúxase, caen os colgantes e despois
    (app.js) o logo voa ao seu sitio mentres o verde se pecha en círculo cara a el */
-.intro {
-  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
-  background: #3f7d3a; clip-path: circle(150vmax at var(--cx, 50%) var(--cy, 50%));
-  transition: clip-path .65s cubic-bezier(.6, 0, .25, 1), opacity .25s;
+.intro { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; transition: opacity .25s; }
+/* O verde vai nunha capa propia para que o círculo, ao pecharse, non recorte o logo */
+.intro::before {
+  content: ""; position: absolute; inset: 0; background: #3f7d3a;
+  clip-path: circle(150vmax at var(--cx, 50%) var(--cy, 50%)); transition: clip-path .65s cubic-bezier(.6, 0, .25, 1);
 }
-.intro.voando { clip-path: circle(23px at var(--cx) var(--cy)); }
+.intro.voando::before { clip-path: circle(0 at var(--cx) var(--cy)); }
 .intro.saindo { opacity: 0; }
-.intro-logo { width: 150px; height: 150px; transition: transform .65s cubic-bezier(.6, 0, .25, 1); }
+.intro-logo { position: relative; width: 150px; height: 150px; transition: transform .65s cubic-bezier(.6, 0, .25, 1); }
+/* Cara ao xugo da cabeceira: sen cadrado e coas súas cores */
+/* As cores cambian só ao final, cando o verde xa case se pechou (se non, o arco verde desaparecería sobre el) */
+.intro-fondo, .intro-arco, .intro-colgante { transition: opacity .3s .35s, stroke .25s .4s; }
+.intro.sen-fondo.voando .intro-fondo { opacity: 0; }
+.intro.sen-fondo.voando .intro-arco { stroke: var(--arco-destino); }
+.intro.sen-fondo.voando .intro-colgante { stroke: var(--colgantes-destino); }
 .intro-logo svg { display: block; width: 100%; height: 100%; animation: intro-entra .5s ease-out both; }
 /* O trazo crece desde a esquerda (o oco de 2 fai que non asome nada polo outro extremo) */
 .intro-arco { stroke-dasharray: 0 2; opacity: 0; animation: intro-arco .45s .1s ease-out forwards; }
@@ -158,32 +165,59 @@ small { color: var(--texto-2); }
 }
 
 /* ---------- Barra superior ---------- */
+/* Unha soa fila: xugo + nome da pestana en grande á esquerda, sincronización/avisos/axustes á dereita */
 .barra {
   position: sticky; top: 0; z-index: 20;
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
-  padding: 0 16px; padding-top: env(safe-area-inset-top);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 12px 0 16px; padding-top: env(safe-area-inset-top);
   min-height: var(--barra-alto);
-  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  background: color-mix(in srgb, var(--fondo) 88%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--borde);
 }
-.marca { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--texto); font-weight: 700; font-size: 1.1rem; }
+.marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.marca h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 400px) { .marca h1 { font-size: 1.3rem; } }
 .logo { width: 32px; height: 32px; }
-.navegacion { display: flex; align-items: center; gap: 10px; justify-self: center; }
-.pestanas { display: flex; gap: 4px; background: var(--superficie-2); padding: 4px; border-radius: 12px; }
-/* Mercado: botón aparte, con outro color, fóra das pestanas que se deslizan */
-.boton-mercado {
-  display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; text-decoration: none; font-weight: 700;
-  color: var(--mercado-ambar); background: var(--mercado-boton); border: 1.5px solid var(--mercado); white-space: nowrap;
-}
-.boton-mercado.activa { background: var(--mercado-ambar); color: var(--mercado-tinta); }
+.xugo { width: 36px; height: 24px; flex: none; }
+.xugo .arco { stroke: var(--primario); }
+.xugo .colgantes { stroke: #c9a85a; }
+.marca .ic-mercado { width: 26px; height: 26px; color: var(--mercado); }
 .ic-mercado { width: 20px; height: 20px; flex: none; }
-.pestanas a {
-  position: relative; display: flex; align-items: center; gap: 6px;
-  padding: 7px 16px; border-radius: 9px; text-decoration: none; color: var(--texto-2); font-weight: 600;
+.accions { display: flex; gap: 2px; flex: none; }
+
+/* Pestanas: barra abaixo no móbil, ao alcance do dedo */
+.nav-inferior {
+  position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; display: flex;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--superficie) 94%, transparent); backdrop-filter: blur(10px);
+  border-top: 1px solid var(--borde);
 }
-.pestanas a.activa { background: var(--superficie); color: var(--texto); box-shadow: var(--sombra); }
-.accions { display: flex; gap: 2px; }
+.nav-inferior a {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px 0;
+  text-decoration: none; color: var(--texto-2); font-size: .74rem; font-weight: 600;
+}
+.nav-ic { display: flex; align-items: center; justify-content: center; width: 58px; height: 30px; border-radius: 99px; transition: background .15s; }
+.nav-ic .ic, .nav-ic .ic-mercado { width: 22px; height: 22px; }
+.nav-inferior a.activa { color: var(--primario); font-weight: 800; }
+.nav-inferior a.activa .nav-ic { background: var(--primario-suave); }
+/* No Mercado a barra pasa a carbón, e a súa pestana a ámbar */
+body.modo-mercado .nav-inferior { background: var(--mercado-boton); border-top-color: transparent; }
+body.modo-mercado .nav-inferior a { color: #c9c4b8; }
+body.modo-mercado .nav-inferior a.activa { color: var(--mercado-ambar); }
+body.modo-mercado .nav-inferior a.activa .nav-ic { background: var(--mercado-ambar); color: var(--mercado-tinta); }
+.sen-sesion .nav-inferior { display: none; }
+/* No ordenador: as pestanas arriba, no medio da cabeceira */
+@media (min-width: 900px) {
+  .nav-inferior {
+    left: 50%; right: auto; bottom: auto; top: calc(env(safe-area-inset-top) + 8px); transform: translateX(-50%);
+    padding: 3px; gap: 3px; border: 0; border-radius: 99px; background: var(--superficie-2); backdrop-filter: none;
+  }
+  .nav-inferior a { flex-direction: row; gap: 4px; padding: 0 14px 0 4px; border-radius: 99px; font-size: .9rem; }
+  .nav-ic { width: 32px; height: 32px; background: none !important; }
+  .nav-ic .ic, .nav-ic .ic-mercado { width: 19px; height: 19px; }
+  .nav-inferior a.activa { background: var(--superficie); box-shadow: var(--sombra); }
+  body.modo-mercado .nav-inferior a.activa { background: var(--mercado-ambar); color: var(--mercado-tinta); }
+}
 .insignia {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
   background: var(--vermello); color: #fff; font-size: .72rem; font-weight: 700;
@@ -206,13 +240,6 @@ small { color: var(--texto-2); }
 .sync-progreso { font-size: .72rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 @keyframes xirar { to { transform: rotate(360deg); } }
 
-@media (max-width: 640px) {
-  .barra { grid-template-columns: 1fr auto; padding: 0 12px; gap: 0; }
-  .navegacion { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; margin: 0 0 8px; gap: 8px; }
-  .pestanas { flex: 1; }
-  .pestanas a { flex: 1; justify-content: center; padding: 7px 8px; }
-  .boton-mercado { padding: 8px 10px; }
-}
 
 /* ---------- Botóns ---------- */
 .btn {
@@ -239,7 +266,9 @@ small { color: var(--texto-2); }
 @keyframes entra-esquerda { from { transform: translateX(-40px); opacity: .3; } }
 
 /* ---------- Vista ---------- */
-.vista { max-width: 1180px; margin: 0 auto; padding: 16px 16px 48px; }
+.vista { max-width: 1180px; margin: 0 auto; padding: 8px 16px 48px; }
+/* No móbil, que o final da lista non quede debaixo da barra das pestanas */
+@media (max-width: 899px) { .vista { padding-bottom: calc(96px + env(safe-area-inset-bottom)); } }
 
 .ferramentas { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
 .busca {
@@ -295,7 +324,6 @@ details.grupo summary h3 { display: flex; align-items: center; gap: 8px; margin:
   width: min(380px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
   background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--raio); box-shadow: var(--sombra-alta); padding: 12px;
 }
-@media (max-width: 640px) { .panel-avisos { top: calc(var(--barra-alto) + env(safe-area-inset-top) + 52px); } }
 .panel-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .panel-lista { display: flex; flex-direction: column; gap: 6px; }
 .panel-lista .aviso { max-width: none; width: 100%; }
@@ -662,8 +690,9 @@ body.modo-mercado { --primario: var(--mercado); --primario-2: var(--mercado-2); 
 :root[data-tema="escuro"] body.modo-mercado { --texto-primario: var(--mercado-tinta); }
 .mercado { display: flex; flex-direction: column; gap: 12px; }
 .mercado-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.mercado-cab h1 { display: flex; align-items: center; gap: 8px; }
-.mercado-cab h1 .ic-mercado { width: 30px; height: 30px; color: var(--mercado); }
+.mercado-cab .subpestanas { flex: 1; }
+/* No móbil o botón Publicar queda só co + */
+@media (max-width: 520px) { .mercado-cab .so-ancho { display: none; } .mercado-cab .btn { padding: 8px 12px; } }
 .baleiro-ic .ic-mercado { width: 56px; height: 56px; color: var(--mercado-ambar); }
 .mercado .subpestanas { max-width: 420px; }
 .mercado .ferramentas { margin-bottom: 0; }
@@ -900,6 +929,7 @@ form[data-tipo="pasto"] .so-forraxe { display: none; }
   position: fixed; z-index: 100; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
   display: flex; flex-direction: column; gap: 8px; align-items: center; width: max-content; max-width: calc(100vw - 32px);
 }
+@media (max-width: 899px) { body:not(.sen-sesion) .toasts { bottom: calc(84px + env(safe-area-inset-bottom)); } }
 .toast {
   display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 12px;
   background: #2b2d27; color: #f2f1ea; box-shadow: var(--sombra-alta); animation: entra .2s ease-out; transition: opacity .4s, transform .4s;
